@@ -2,23 +2,32 @@
 
 import { CheckIcon, FlagIcon, LockIcon } from "@/components/icons";
 import { Eyebrow, Ring } from "@/components/ui";
-import { useLiveBoard } from "@/components/squad/live-board";
+import { useOptionalLiveBoard } from "@/components/squad/live-board";
 import { STATUS_LABEL, daysInMonth, missionProgress, missionStatus } from "@/lib/mission";
 import type { MonthMission } from "@/lib/progress";
 
-/** October / November / December mission cards. State = icon + label, not colour alone. */
-export function MonthCards({ months: serverMonths, dayOfMonth }: { months: MonthMission[]; dayOfMonth: number }) {
-  // The current month follows live taps; other months are as rendered.
-  const { total } = useLiveBoard();
+/** Each mission month's total vs target. State = icon + label, not colour alone. */
+export function MonthCards({
+  months: serverMonths,
+  dayOfMonth,
+  title = "Mission months",
+}: {
+  months: MonthMission[];
+  dayOfMonth: number;
+  title?: string;
+}) {
+  // On the dashboard the current month follows live taps; elsewhere it's as rendered.
+  const live = useOptionalLiveBoard();
   const months = serverMonths.map((m) => {
-    if (m.phase !== "current") return m;
+    if (m.phase !== "current" || !live) return m;
+    const total = live.total;
     const progress = missionProgress(total, m.progress.target);
     return { ...m, progress, status: missionStatus({ progress, phase: m.phase, dayOfMonth, daysInMonth: daysInMonth(m.month) }) };
   });
   return (
     <section aria-labelledby="months-title" className="animate-rise [animation-delay:120ms]">
       <Eyebrow className="px-1">
-        <span id="months-title">Mission months</span>
+        <span id="months-title">{title}</span>
       </Eyebrow>
       <ul className="mt-3 flex flex-col gap-3">
         {months.map((m) => {
@@ -55,7 +64,7 @@ export function MonthCards({ months: serverMonths, dayOfMonth }: { months: Month
                   ) : null}
                 </div>
                 <p className="text-[15px] font-semibold tabular-nums">
-                  {locked ? `Target ${m.progress.target} cases` : `${m.progress.total} / ${m.progress.target} cases`}
+                  {m.progress.total} / {m.progress.target} cases
                 </p>
               </div>
               <span

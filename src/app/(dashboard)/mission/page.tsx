@@ -5,7 +5,7 @@ import { AnimatedNumber } from "@/components/animated-number";
 import { AppShell } from "@/components/app-shell";
 import { FlameIcon } from "@/components/icons";
 import { MilestoneBadges } from "@/components/mission/milestone-badges";
-import { MissionJourney } from "@/components/mission/mission-journey";
+import { MonthCards } from "@/components/mission/month-cards";
 import { StatusPill } from "@/components/status-pill";
 import { Card, Eyebrow, Meter, Ring } from "@/components/ui";
 import { getDashboard } from "@/lib/data/dashboard";
@@ -64,7 +64,7 @@ export default async function MissionPage() {
         </div>
       </section>
 
-      <MissionJourney months={progress.months} />
+      <MonthCards months={progress.months} dayOfMonth={progress.dayOfMonth} title="Monthly totals" />
 
       <Card className="animate-rise [animation-delay:160ms]" aria-labelledby="overall-title">
         <div className="flex items-baseline justify-between gap-3">

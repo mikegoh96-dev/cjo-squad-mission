@@ -20,6 +20,11 @@ type LiveBoard = {
 
 const Ctx = createContext<LiveBoard | null>(null);
 
+/** The live board when inside the dashboard; null elsewhere (e.g. the Mission screen). */
+export function useOptionalLiveBoard(): LiveBoard | null {
+  return useContext(Ctx);
+}
+
 export function useLiveBoard(): LiveBoard {
   const value = useContext(Ctx);
   if (!value) throw new Error("useLiveBoard must be used inside <LiveBoardProvider>");
