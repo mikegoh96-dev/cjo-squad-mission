@@ -148,6 +148,24 @@ body {
   from { opacity: 0; transform: translateY(-16px) scale(0.96); }
   to { opacity: 1; transform: none; }
 }
+@keyframes number-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.35); color: var(--accent); }
+  100% { transform: scale(1); }
+}
+@keyframes float-up {
+  0% { opacity: 0; transform: translateY(6px) scale(0.8); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-34px) scale(1.15); }
+}
+@keyframes burst {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.4); }
+}
+@keyframes card-glow {
+  0% { box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--brand-to) 70%, transparent); background: color-mix(in oklab, var(--accent) 8%, transparent); }
+  100% { box-shadow: inset 0 0 0 2px transparent; background: transparent; }
+}
 @keyframes soft-pulse {
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 45%, transparent); }
   50% { box-shadow: 0 0 0 6px color-mix(in oklab, var(--accent) 0%, transparent); }
@@ -159,6 +177,10 @@ body {
 .animate-draw { stroke-dasharray: 30; stroke-dashoffset: 30; animation: draw 0.4s 0.2s ease-out forwards; }
 .animate-shimmer { animation: shimmer 1.4s ease-in-out infinite; }
 .animate-soft-pulse { animation: soft-pulse 2.4s ease-in-out infinite; }
+.animate-number-pop { display: inline-block; animation: number-pop 0.42s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.animate-float-up { animation: float-up 0.9s ease-out forwards; }
+.animate-burst { animation: burst 0.6s ease-out forwards; }
+.animate-card-glow { animation: card-glow 0.7s ease-out forwards; }
 .animate-confetti { animation: confetti 2.6s cubic-bezier(0.25, 0.6, 0.4, 1) both; }
 .animate-toast { animation: toast-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 
@@ -167,6 +189,7 @@ body {
     animation: none !important;
   }
   .animate-draw { animation: none !important; stroke-dashoffset: 0; }
-  .animate-confetti { display: none; }
+  .animate-confetti, .animate-float-up, .animate-burst, .animate-card-glow { display: none; }
+  .animate-number-pop { animation: none !important; }
   *, *::before, *::after { transition-duration: 0.01ms !important; }
 }

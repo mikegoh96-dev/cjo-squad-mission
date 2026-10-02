@@ -28,8 +28,8 @@ shows everywhere immediately.
 Shared dashboard; October / November / December missions (current month
 featured); collective progress; team momentum (net cases today / this week);
 monthly milestones (first case, 50%, 75%, target) with a short celebration;
-case entry by name for the open month; member list (A–Z); each member's recent
-updates. Mobile-first. Anything else (notifications, chat, profiles, points,
+one big card per member (A–Z) on the dashboard with -/+ to update their
+count for the open month. Mobile-first. Anything else (notifications, chat, profiles, points,
 analytics, integrations) is out of scope.
 
 ## Access model: shared link, no login
@@ -39,10 +39,14 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
 - **Dashboard `/`** and **Mission `/mission`**: read-only squad progress.
   Data: `src/lib/data/dashboard.ts` -> pure maths in `src/lib/progress.ts` and
   `src/lib/mission.ts`. Contributions are listed alphabetically, never ranked.
-- **Update `/update`**: pick your name, then set your **total** for the open
-  month (never an increment). `?member=<squad_member_id>` selects a member; the
-  member a device last saved for is remembered in an httpOnly cookie
-  (`cjo_member`, `src/lib/remembered-member.ts`). "Not you?" clears it.
+- **Updating happens on the dashboard**: every member has a big card with this
+  month's count and -/+ buttons (`src/components/squad/`). Taps update the
+  card, hero, momentum and month card instantly (`LiveBoardProvider`,
+  optimistic); after 600 ms without taps the card saves its new **total** once
+  (`saveCaseCount` Server Action). + taps get a short hype animation (number
+  pop, floating +1, burst, cheer); squad milestones trigger a celebration.
+  Counts belong to the open month, so every card starts at 0 when a new
+  mission month begins. There is no separate update page.
 
 **Security trade-off (accepted for a trusted internal team tool):** because
 there is no authentication, the system **cannot prove who submitted a count**.
@@ -52,10 +56,10 @@ total. Mitigations:
   is writable by the browser roles;
 - only existing squad members, only the open month (campaign time zone), only
   whole numbers 0–1000;
-- saves are conflict-safe: the screen sends the count it displayed; the
-  function locks the member row and returns `saved`, `unchanged` (double taps
-  and retries never inflate) or `conflict` (nothing written; the UI offers
-  "Keep X / Save Y anyway");
+- saves are conflict-safe: a card sends the last total it confirmed; the
+  function locks the member row and returns `saved`, `unchanged` (retries
+  never inflate) or `conflict` (nothing written; the card shows the newer
+  total: "Updated elsewhere: now X");
 - every real change is kept in the append-only `case_update_history`
   (`changed_by` is null: the submitter is unknown), so mistakes or misuse can be
   seen and corrected by an admin. If the link leaks outside the squad, treat it
@@ -70,13 +74,13 @@ The `(dashboard)` route group holds `/` and `/mission` with their
 | `src/lib/supabase/env.ts` | Reads and validates env vars |
 | `src/lib/supabase/database.types.ts` | **Generated** DB types (`npm run db:types`); never edit by hand |
 | `src/lib/data/dashboard.ts` | Dashboard data (V1: the oldest squad, current campaign) + momentum |
-| `src/lib/data/case-updates.ts` | `submitCaseCount`, `getRecentUpdates`, `getSquadMonthForMember` |
+| `src/lib/data/case-updates.ts` | `submitCaseCount` (the only write) |
+| `src/lib/board.ts` | Tap clamping, cheers, optimistic totals (unit-tested) |
 | `src/lib/mission.ts` | Pure mission maths: progress %, status, milestones, celebration, momentum, messages (unit-tested) |
 | `src/lib/progress.ts` | Campaign/month phases, focus month, month filtering, contributions (unit-tested) |
 | `src/lib/initials.ts` | Avatar initials unique within the squad (Jamie JM, Jasmine JS; unit-tested) |
-| `src/lib/remembered-member.ts` | Remembered-member cookie (convenience, not a credential) |
-| `src/app/(dashboard)/` | Dashboard, Mission screen, loading skeleton, error state |
-| `src/app/update/` | Name picker + `update-screen.tsx`, `actions.ts` (`saveCaseCount`, `switchMember`) |
+| `src/app/(dashboard)/` | Dashboard (with member cards), Mission screen, `actions.ts` (`saveCaseCount`), loading skeleton, error state |
+| `src/components/squad/` | `LiveBoardProvider`, `SquadBoard`, `MemberCard` (-/+, debounced conflict-safe saves, hype animation) |
 | `src/components/` | `ui.tsx` (Card, Meter, Ring, Avatar), icons, `app-shell`, `nav/bottom-nav`, `mission/*` |
 | `scripts/members.mjs` | Admin CLI: list / add / rename / remove members |
 
@@ -86,7 +90,7 @@ can do only what the `anon` role can do.
 ## Design
 
 Mobile-first, iOS-inspired: rounded cards, big numbers, blue -> violet brand
-gradient (`bg-brand`), Plus Jakarta Sans, bottom navigation (Squad · Update ·
+gradient (`bg-brand`), Plus Jakarta Sans, bottom navigation (Squad ·
 Mission). Tokens live in `src/app/globals.css` (light + dark). Status is always
 icon + label; green = complete only. Motion is subtle and off under
 `prefers-reduced-motion` (confetti hidden). Headline copy is collective ("We're
@@ -105,7 +109,7 @@ npm run members -- rename <squad_member_id> "<new name>"
 npm run members -- remove <squad_member_id>   # also deletes their counts + history
 ```
 
-To correct a count, use the app (pick the member) or the SQL editor.
+To correct a count, tap - on that member's card, or use the SQL editor.
 
 ## Environment variables
 
@@ -149,7 +153,7 @@ The open month is resolved in the campaign's `time_zone`.
 
 | Role | Can | Cannot |
 | --- | --- | --- |
-| anon / authenticated | SELECT members, squads, squad_members, campaigns, monthly_targets, member_case_counts, squad_monthly_progress; call `submit_case_count(member, count, expected)`, `squad_momentum(squad)`, `member_recent_updates(member, limit)` | INSERT/UPDATE/DELETE any table; read raw `case_update_history` |
+| anon / authenticated | SELECT members, squads, squad_members, campaigns, monthly_targets, member_case_counts, squad_monthly_progress; call `submit_case_count(member, count, expected)`, `squad_momentum(squad)`, `member_recent_updates(member, limit)` (currently unused by the UI) | INSERT/UPDATE/DELETE any table; read raw `case_update_history` |
 | service_role (admin CLI) | manage squads, members and counts | — |
 
 The functions are `security definer` with `search_path = ''`; private helpers

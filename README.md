@@ -2,7 +2,7 @@
 
 Collective squad progress app built on Next.js (App Router), TypeScript, Tailwind CSS and Supabase.
 
-One shared link, no login: the squad dashboard at `/`, the mission view at `/mission`, and `/update` where members pick their name and set their monthly total. Architecture, security model, admin commands and migrations are documented in [CLAUDE.md](CLAUDE.md).
+One shared link, no login: the squad dashboard at `/` (each member taps -/+ on their own card) and the mission view at `/mission`. Architecture, security model, admin commands and migrations are documented in [CLAUDE.md](CLAUDE.md).
 
 ## Requirements
 
@@ -39,8 +39,7 @@ Open http://localhost:3000.
 ```
 src/
   app/(dashboard)/  Dashboard and Mission screens, loading skeleton, error + retry
-  app/update/       Name picker + update screen, Server Actions
-  components/       UI primitives (ui.tsx, icons) and mission/ feature components
+  components/       UI primitives (ui.tsx, icons), mission/ and squad/ (live member cards)
   config/           Static app configuration (site name, metadata)
   lib/              mission.ts + progress.ts (pure maths), data loaders, Supabase client, validation
 scripts/            Admin CLI for members

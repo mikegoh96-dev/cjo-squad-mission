@@ -1,10 +1,20 @@
+"use client";
+
 import { CheckIcon, FlagIcon, LockIcon } from "@/components/icons";
 import { Eyebrow, Ring } from "@/components/ui";
-import { STATUS_LABEL } from "@/lib/mission";
+import { useLiveBoard } from "@/components/squad/live-board";
+import { STATUS_LABEL, daysInMonth, missionProgress, missionStatus } from "@/lib/mission";
 import type { MonthMission } from "@/lib/progress";
 
 /** October / November / December mission cards. State = icon + label, not colour alone. */
-export function MonthCards({ months }: { months: MonthMission[] }) {
+export function MonthCards({ months: serverMonths, dayOfMonth }: { months: MonthMission[]; dayOfMonth: number }) {
+  // The current month follows live taps; other months are as rendered.
+  const { total } = useLiveBoard();
+  const months = serverMonths.map((m) => {
+    if (m.phase !== "current") return m;
+    const progress = missionProgress(total, m.progress.target);
+    return { ...m, progress, status: missionStatus({ progress, phase: m.phase, dayOfMonth, daysInMonth: daysInMonth(m.month) }) };
+  });
   return (
     <section aria-labelledby="months-title" className="animate-rise [animation-delay:120ms]">
       <Eyebrow className="px-1">

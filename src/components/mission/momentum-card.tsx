@@ -1,9 +1,16 @@
+"use client";
+
 import { FlameIcon } from "@/components/icons";
 import { Card, Eyebrow } from "@/components/ui";
+import { useLiveBoard } from "@/components/squad/live-board";
 import { formatDelta, momentumHeadline } from "@/lib/mission";
 
 /** Team momentum: net cases added today and this week (whole squad). */
-export function MomentumCard({ today, thisWeek }: { today: number; thisWeek: number }) {
+export function MomentumCard({ today: serverToday, thisWeek: serverWeek }: { today: number; thisWeek: number }) {
+  // Server momentum plus this screen's taps not yet reflected in it.
+  const { delta } = useLiveBoard();
+  const today = serverToday + delta;
+  const thisWeek = serverWeek + delta;
   return (
     <Card className="animate-rise [animation-delay:60ms]" aria-labelledby="momentum-title">
       <div className="flex items-center gap-3">

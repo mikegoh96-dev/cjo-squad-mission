@@ -1,25 +1,30 @@
-import Link from "next/link";
+"use client";
+
 import { AnimatedNumber } from "@/components/animated-number";
 import { PlusIcon } from "@/components/icons";
 import { StatusPill } from "@/components/status-pill";
 import { Meter } from "@/components/ui";
-import { type MonthMilestone, heroMessage, nextMilestone } from "@/lib/mission";
+import { daysInMonth, heroMessage, missionProgress, missionStatus, monthMilestones, nextMilestone } from "@/lib/mission";
 import type { CampaignPhase, MonthMission } from "@/lib/progress";
+import { useLiveBoard } from "@/components/squad/live-board";
 import { TrophyArt } from "./trophy-art";
 
-/** The visual hero: this month's collective count against the target. */
+/** The visual hero: this month's collective count against the target (live). */
 export function MissionHero({
   focus,
   phase,
-  milestones,
+  dayOfMonth,
 }: {
   focus: MonthMission;
   phase: CampaignPhase;
-  milestones: MonthMilestone[];
+  dayOfMonth: number;
 }) {
-  const { progress, label } = focus;
+  const { total, editable } = useLiveBoard();
+  const { label } = focus;
+  const progress = missionProgress(total, focus.progress.target);
+  const status = missionStatus({ progress, phase: focus.phase, dayOfMonth, daysInMonth: daysInMonth(focus.month) });
+  const milestones = monthMilestones(progress, label);
   const next = nextMilestone(milestones);
-  const canUpdate = focus.phase === "current";
   const markers = milestones
     .filter((m) => m.key !== "started" && m.cases < progress.target)
     .map((m) => Math.round((m.cases * 100) / progress.target))
@@ -39,7 +44,7 @@ export function MissionHero({
         >
           {label} mission{phase === "before" ? " · starts soon" : phase === "finished" ? " · final" : ""}
         </h2>
-        <StatusPill status={focus.status} onBrand />
+        <StatusPill status={status} onBrand />
       </div>
 
       <p className="relative mt-5 flex flex-wrap items-baseline gap-x-2" data-testid="hero-count">
@@ -71,16 +76,15 @@ export function MissionHero({
         </div>
       </div>
 
-      {canUpdate ? (
-        <Link
-          href="/update"
-          prefetch
+      {editable ? (
+        <a
+          href="#squad"
           data-testid="update-cta"
           className="relative mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-white text-[17px] font-bold text-[#2f54d6] shadow-[0_8px_20px_-10px_rgba(0,0,0,0.35)] transition-transform active:scale-[0.98]"
         >
           <PlusIcon className="size-5" />
-          Update my cases
-        </Link>
+          Add my cases
+        </a>
       ) : null}
     </section>
   );

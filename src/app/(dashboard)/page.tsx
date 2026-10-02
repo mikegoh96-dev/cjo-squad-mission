@@ -5,7 +5,8 @@ import { Celebration } from "@/components/mission/celebration";
 import { MissionHero } from "@/components/mission/mission-hero";
 import { MomentumCard } from "@/components/mission/momentum-card";
 import { MonthCards } from "@/components/mission/month-cards";
-import { SquadList } from "@/components/mission/squad-list";
+import { LiveBoardProvider } from "@/components/squad/live-board";
+import { SquadBoard } from "@/components/squad/squad-board";
 import { Card } from "@/components/ui";
 import { siteConfig } from "@/config/site";
 import { type Dashboard, getDashboard } from "@/lib/data/dashboard";
@@ -19,7 +20,10 @@ export default async function DashboardPage() {
 
   const { progress, squadId, squadName, momentum, lastUpdatedAt } = dashboard;
   const { focus, milestones } = progress;
-  const reached = focus.phase === "current" ? milestones.filter((m) => m.reached).at(-1) : undefined;
+  const editable = focus.phase === "current";
+  const reached = editable ? milestones.filter((m) => m.reached).at(-1) : undefined;
+  const serverCounts = Object.fromEntries(progress.contributions.map((c) => [c.squadMemberId, c.monthCases]));
+  const celebrationKey = `cjo:milestone:${squadId}:${focus.month}`;
 
   return (
     <AppShell
@@ -33,16 +37,39 @@ export default async function DashboardPage() {
       }
       aside={<MemberCount people={progress.contributions} />}
     >
-      <MissionHero focus={focus} phase={progress.phase} milestones={milestones} />
-      <MomentumCard today={momentum.today} thisWeek={momentum.thisWeek} />
-      <MonthCards months={progress.months} />
-      <SquadList contributions={progress.contributions} monthLabel={focus.label} total={focus.progress.total} />
+      <LiveBoardProvider
+        serverCounts={serverCounts}
+        editable={editable}
+        target={focus.progress.target}
+        monthLabel={focus.label}
+        celebrationKey={celebrationKey}
+      >
+        <MissionHero focus={focus} phase={progress.phase} dayOfMonth={progress.dayOfMonth} />
+        <SquadBoard
+          members={progress.contributions.map((c) => ({
+            id: c.squadMemberId,
+            name: c.displayName,
+            initials: c.initials,
+            count: c.monthCases,
+          }))}
+          monthLabel={focus.label}
+          closedNote={
+            progress.phase === "before"
+              ? `Updates open on 1 ${focus.label}.`
+              : progress.phase === "finished"
+                ? "The mission has finished. Thank you, squad!"
+                : null
+          }
+        />
+        <MomentumCard today={momentum.today} thisWeek={momentum.thisWeek} />
+        <MonthCards months={progress.months} dayOfMonth={progress.dayOfMonth} />
+      </LiveBoardProvider>
       {reached ? (
         <Celebration
           title={`${reached.label}!`}
           message={`The squad reached ${reached.cases} ${reached.cases === 1 ? "case" : "cases"} in ${focus.label}.`}
           cases={reached.cases}
-          storageKey={`cjo:milestone:${squadId}:${focus.month}`}
+          storageKey={celebrationKey}
         />
       ) : null}
     </AppShell>
