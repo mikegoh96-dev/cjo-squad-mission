@@ -107,9 +107,10 @@ DAL in the page.
 
 ### Hosted Auth settings (Supabase dashboard → Authentication)
 
-- URL Configuration → Site URL: the production URL (e.g. the Vercel domain).
-- Redirect URLs: `http://localhost:3000/**`, `<production URL>/**`, and for
-  Vercel previews `https://*-<vercel-team-slug>.vercel.app/**`.
+- URL Configuration → Site URL: `https://cjo-squad-mission-pi.vercel.app`
+- Redirect URLs: `http://localhost:3000/**`,
+  `https://cjo-squad-mission-pi.vercel.app/**`, and Vercel previews
+  `https://cjo-squad-mission-*-mikegoh96-devs-projects.vercel.app/**`.
 - Sign-ups: leave email sign-ups on for self-registration (new users wait for
   an admin to add them to a squad), or turn them off for invite-only.
 - `supabase/config.toml` holds the equivalent **local** settings only.
