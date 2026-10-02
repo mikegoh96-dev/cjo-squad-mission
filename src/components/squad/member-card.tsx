@@ -47,6 +47,7 @@ export function MemberCard({
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [fx, setFx] = useState<Fx[]>([]);
   const [bump, setBump] = useState(0);
+  const [remote, setRemote] = useState(0); // updates arriving from other phones
   const [cheer, setCheer] = useState<string | null>(null);
 
   const displayRef = useRef(serverCount);
@@ -67,8 +68,17 @@ export function MemberCard({
   // card has unsaved taps or a save in flight.
   useEffect(() => {
     if (!inFlight.current && displayRef.current === confirmed.current) {
+      const before = displayRef.current;
       confirmed.current = serverCount;
       show(serverCount);
+      if (serverCount > before) {
+        // A teammate added cases on another phone: glow, pop and float "+n".
+        const fxId = Date.now() + Math.random();
+        setRemote((r) => r + 1);
+        setFx((list) => [...list.slice(-4), { id: fxId, text: `+${serverCount - before}` }]);
+        window.setTimeout(() => setFx((list) => list.filter((f) => f.id !== fxId)), 900);
+        setCheer("Just added!");
+      }
     }
   }, [serverCount, show]);
 
@@ -167,7 +177,7 @@ export function MemberCard({
       data-member-id={id}
       className="relative flex flex-col overflow-hidden rounded-[26px] bg-surface p-3.5 shadow-card"
     >
-      {bump > 0 ? <span key={`glow-${bump}`} aria-hidden="true" className="animate-card-glow pointer-events-none absolute inset-0 rounded-[26px]" /> : null}
+      {bump + remote > 0 ? <span key={`glow-${bump}-${remote}`} aria-hidden="true" className="animate-card-glow pointer-events-none absolute inset-0 rounded-[26px]" /> : null}
 
       <div className="flex min-w-0 items-center gap-2">
         <Avatar name={name} id={id} initials={initials} size="sm" />
@@ -189,10 +199,10 @@ export function MemberCard({
 
         <span className="relative flex min-w-0 flex-1 justify-center">
           <span
-            key={`n-${bump}`}
+            key={`n-${bump}-${remote}`}
             data-testid="member-count"
             aria-live="polite"
-            className={`${bump > 0 ? "animate-number-pop" : ""} ${size} leading-none font-extrabold tracking-tight tabular-nums`}
+            className={`${bump + remote > 0 ? "animate-number-pop" : ""} ${size} leading-none font-extrabold tracking-tight tabular-nums`}
           >
             {display}
           </span>

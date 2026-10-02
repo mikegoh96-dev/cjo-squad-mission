@@ -47,6 +47,15 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
   (`saveCaseCount` Server Action). + taps get a short hype animation (number
   pop, floating +1, burst, cheer); squad milestones trigger a celebration
   banner (dismiss with × or by swiping it left, right or up).
+- **Real-time sync** (`src/components/live/live-sync.tsx`, mounted by
+  `src/app/(dashboard)/layout.tsx`): a browser Supabase client
+  (`src/lib/supabase/browser.ts`, publishable key, Realtime only) listens for
+  `postgres_changes` on `member_case_counts` and `squad_members` and calls
+  `router.refresh()` (debounced 400 ms). Safety net: refresh every 15 s while
+  visible (60 s when Realtime is connected), on focus/visibility and when the
+  network returns. Cards with unsaved taps keep their value; a teammate's
+  increase flashes their card ("+n", "Just added!"). The header shows "Live"
+  (Realtime subscribed) or "Auto-updating" (polling).
   Counts belong to the open month, so every card starts at 0 when a new
   mission month begins. There is no separate update page.
 
@@ -83,11 +92,14 @@ The `(dashboard)` route group holds `/` and `/mission` with their
 | `src/lib/initials.ts` | Avatar initials unique within the squad (Jamie JM, Jasmine JS; unit-tested) |
 | `src/app/(dashboard)/` | Dashboard (with member cards), Mission screen, `actions.ts` (`saveCaseCount`), loading skeleton, error state |
 | `src/components/squad/` | `LiveBoardProvider`, `SquadBoard`, `MemberCard` (-/+, debounced conflict-safe saves, hype animation) |
+| `src/components/live/live-sync.tsx` | Real-time sync (Realtime + polling fallback) and the Live badge |
+| `src/lib/supabase/browser.ts` | Browser client for Realtime only (publishable key) |
 | `src/components/` | `ui.tsx` (Card, Meter, Ring, Avatar), icons, `app-shell`, `nav/bottom-nav`, `mission/*` |
 | `scripts/members.mjs` | Admin CLI: list / add / rename / remove members |
 
 The app never uses a service-role/secret key; all browser-facing code paths
-can do only what the `anon` role can do.
+can do only what the `anon` role can do. Realtime respects RLS: browsers only
+receive rows the anon role may read (these tables are public-read anyway).
 
 ## Design
 
@@ -139,6 +151,9 @@ Copy `.env.example` to `.env.local` (git-ignored).
   `supabase_migrations.schema_migrations`. `20261002095229_member_weekly_momentum`
   must be applied too (SQL editor or `npx supabase db push`); until then the
   per-member weekly list is simply hidden.
+  `20261002100603_realtime_case_counts` adds both tables to the
+  `supabase_realtime` publication (idempotent); until it is applied, sync falls
+  back to polling ("Auto-updating").
 - Types were last generated with `@supabase/postgres-meta` against the migrated
   local database (`PG_META_GENERATE_TYPES_DETECT_ONE_TO_ONE_RELATIONSHIPS=true`,
   `PG_META_POSTGREST_VERSION=14.18`), byte-identical to the hosted generator.

@@ -1,7 +1,7 @@
 -- Schema, privileges and data-integrity tests. Run with: npx supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(32);
+select plan(33);
 
 -- ---------------------------------------------------------------------------
 -- Tables, RLS and the derived progress view
@@ -106,6 +106,13 @@ select is(
 );
 select ok(not has_function_privilege('anon', 'private.current_campaign_month()', 'EXECUTE'),
   'private helpers are not executable by API roles');
+
+select is(
+  (select array_agg(tablename::text order by tablename::text) from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public'),
+  array['member_case_counts', 'squad_members'],
+  'case counts and squad membership are broadcast for real-time sync (and nothing else)'
+);
 
 -- ---------------------------------------------------------------------------
 -- Campaign configuration is stored as data

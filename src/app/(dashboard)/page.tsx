@@ -2,6 +2,7 @@ import { connection } from "next/server";
 import { AppShell } from "@/components/app-shell";
 import { RocketIcon, UsersIcon } from "@/components/icons";
 import { Celebration } from "@/components/mission/celebration";
+import { LiveDot } from "@/components/live/live-sync";
 import { MissionHero } from "@/components/mission/mission-hero";
 import { MomentumCard } from "@/components/mission/momentum-card";
 import { MonthCards } from "@/components/mission/month-cards";
@@ -33,6 +34,9 @@ export default async function DashboardPage() {
         <>
           <span className="font-semibold text-foreground">{squadName}</span>
           {lastUpdatedAt ? ` · updated ${relativeTime(new Date(lastUpdatedAt))}` : null}
+          <span className="mt-1 block">
+            <LiveDot />
+          </span>
         </>
       }
       aside={<MemberCount people={progress.contributions} />}
