@@ -41,8 +41,12 @@ export function Meter({
   onBrand?: boolean;
 }) {
   const clamped = Math.max(0, Math.min(100, value));
-  const track = onBrand ? "bg-white/25" : complete ? "bg-good-track" : "bg-accent-track";
-  const fill = onBrand ? "bg-white" : complete ? "bg-good" : "bg-accent";
+  const track = onBrand ? "bg-[#1f2a7a]/35" : complete ? "bg-good-track" : "bg-accent-track";
+  const fill = onBrand
+    ? "bg-gradient-to-b from-white to-[#dfe6ff] shadow-[0_0_12px_rgba(255,255,255,0.6)]"
+    : complete
+      ? "bg-gradient-to-b from-[#4fd47f] to-good"
+      : "bg-gradient-to-b from-[#7392ff] to-accent";
   return (
     <div
       role="progressbar"
@@ -50,10 +54,12 @@ export function Meter({
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={clamped}
-      className={`relative w-full overflow-hidden rounded-full ${size === "lg" ? "h-3.5" : "h-2"} ${track}`}
+      className={`relative w-full overflow-hidden rounded-full shadow-[inset_0_2px_3px_rgba(10,20,70,0.18)] ${size === "lg" ? "h-4" : "h-2.5"} ${track}`}
     >
       {clamped > 0 ? (
-        <div className={`animate-meter absolute inset-y-0 left-0 rounded-full ${fill}`} style={{ width: `${clamped}%` }} />
+        <div className={`animate-meter absolute inset-y-0 left-0 rounded-full ${fill}`} style={{ width: `${clamped}%` }}>
+          <span aria-hidden="true" className="absolute inset-x-1 top-[2px] h-[30%] rounded-full bg-white/45" />
+        </div>
       ) : null}
       {markers.map((m) => (
         <span
@@ -91,7 +97,7 @@ export function Ring({
   }[tone];
   return (
     <span className="relative inline-flex shrink-0 items-center justify-center" style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true" className="-rotate-90">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true" className="-rotate-90 overflow-visible drop-shadow-[0_4px_6px_rgba(61,95,224,0.28)]">
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={colors[0]} strokeWidth={stroke} />
         {clamped > 0 ? (
           <circle
@@ -144,7 +150,7 @@ export function Avatar({
   return (
     <span
       aria-hidden="true"
-      className={`flex shrink-0 items-center justify-center rounded-full font-bold ${dims} ${tintFor(id)}`}
+      className={`orb flex shrink-0 items-center justify-center rounded-full font-extrabold ${dims} ${tintFor(id)}`}
     >
       {initials ?? initialsFor(name)}
     </span>

@@ -103,13 +103,30 @@ receive rows the anon role may read (these tables are public-read anyway).
 
 ## Design
 
-Mobile-first, iOS-inspired: rounded cards, big numbers, blue -> violet brand
-gradient (`bg-brand`), Plus Jakarta Sans, bottom navigation (Squad ·
-Mission). Tokens live in `src/app/globals.css` (light + dark). Status is always
-icon + label; green = complete only. Motion is subtle and off under
-`prefers-reduced-motion` (confetti hidden). Headline copy is collective ("We're
-3 cases away"), never individual. No rankings, coins, XP or badges beyond the
-four monthly squad milestones.
+Premium 3D mobile-game look, collective and non-competitive. Tokens live in
+`src/app/globals.css` (light + dark): colours, radii (`--radius-card/tile/btn`),
+depth (`--shadow-card`, `--shadow-tile`: inner top highlight + thick bottom
+"lip" + soft drop), physical buttons (`.btn-3d` + `.btn-3d-brand` /
+`.btn-3d-soft`: raised on a lip, press down 2px), glossy avatar `.orb`,
+`.sparkle` particles, faint background rays, and motion (`--ease-spring`;
+`animate-float`, `animate-unlock`, `.shine`, number pop, +1 float, burst,
+card glow, confetti). Everything decorative is off under
+`prefers-reduced-motion`. Plus Jakarta Sans, bold numbers, blue -> violet brand
+gradient (`bg-brand`), bottom navigation (Squad · Mission). Status is always
+icon + label; green = complete only.
+
+**3D achievement objects** (`src/components/art/`): original inline-SVG assets
+(Trophy, Medal, Crown, Rocket, Star, Bolt, Flame, Gem) built on one system:
+shared materials in `art-defs.tsx` (rendered once in the root layout), key light
+top-left, an offset depth layer for thickness, a glossy highlight, a soft cast
+shadow. `muted` = the locked look (soft lavender, dimmed in dark mode). Use
+these for achievement visuals; keep flat icons for UI controls. Mapping:
+milestones started/halfway/momentum/cleared = Star/Medal/Bolt/Trophy; mission
+months by position = Trophy/Rocket/Crown (not by month name); momentum =
+Flame; squad total = Gem; hero = floating Trophy breaking out of the card.
+
+Headline copy is collective ("We're 3 cases away"), never individual. No
+rankings, coins, XP or badges beyond the four monthly squad milestones.
 
 ## Admin: members
 

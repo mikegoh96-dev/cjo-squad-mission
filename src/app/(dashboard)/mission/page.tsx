@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { AnimatedNumber } from "@/components/animated-number";
 import { AppShell } from "@/components/app-shell";
-import { FlameIcon } from "@/components/icons";
+import { Bolt3D, Medal3D, Star3D, Trophy3D } from "@/components/art/objects";
 import { MilestoneBadges } from "@/components/mission/milestone-badges";
 import { MonthCards } from "@/components/mission/month-cards";
 import { StatusPill } from "@/components/status-pill";
@@ -25,7 +25,9 @@ export default async function MissionPage() {
 
   return (
     <AppShell eyebrow={`${focus.label} mission`} title={ENCOURAGEMENT[focus.status]}>
-      <Card className="animate-rise flex flex-col items-center text-center" aria-labelledby="mission-ring-title">
+      <Card className="animate-rise relative isolate flex flex-col items-center overflow-hidden text-center" aria-labelledby="mission-ring-title">
+        <span aria-hidden="true" className="absolute -top-16 left-1/2 -z-10 size-64 -translate-x-1/2 rounded-full bg-accent-soft blur-2xl" />
+        <Star3D className="animate-float pointer-events-none absolute top-4 right-4 size-12" />
         <h2 id="mission-ring-title" className="sr-only">
           {focus.label} progress
         </h2>
@@ -47,10 +49,10 @@ export default async function MissionPage() {
           <StatusPill status={focus.status} />
         </div>
         <p
-          className="mt-4 flex items-center gap-2 rounded-2xl bg-flame-soft px-4 py-2.5 text-[15px] font-bold text-flame-text"
+          className="relative mt-4 flex items-center gap-2 rounded-2xl bg-flame-soft py-2 pr-4 pl-2 text-left text-[15px] font-bold text-flame-text shadow-tile"
           data-testid="mission-next"
         >
-          <FlameIcon className="size-5" />
+          <NextObject milestoneKey={next?.key} />
           {unlockMessage(focus.progress, next)}
         </p>
       </Card>
@@ -87,4 +89,11 @@ export default async function MissionPage() {
       </Card>
     </AppShell>
   );
+}
+
+/** The 3D object of the milestone the squad is working towards. */
+function NextObject({ milestoneKey }: { milestoneKey?: string }) {
+  const Obj =
+    milestoneKey === "started" ? Star3D : milestoneKey === "halfway" ? Medal3D : milestoneKey === "momentum" ? Bolt3D : Trophy3D;
+  return <Obj className="size-10 shrink-0" />;
 }

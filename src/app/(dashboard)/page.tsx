@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 import { AppShell } from "@/components/app-shell";
-import { RocketIcon, UsersIcon } from "@/components/icons";
+import { Rocket3D } from "@/components/art/objects";
+import { UsersIcon } from "@/components/icons";
 import { Celebration } from "@/components/mission/celebration";
 import { LiveDot } from "@/components/live/live-sync";
 import { MissionHero } from "@/components/mission/mission-hero";
@@ -100,9 +101,7 @@ function NotReady({ dashboard }: { dashboard: Exclude<Dashboard, { state: "ready
   return (
     <AppShell eyebrow={siteConfig.name} title={siteConfig.tagline} nav={false}>
       <Card className="animate-rise text-center" data-testid="empty-state">
-        <span className="bg-brand mx-auto flex size-14 items-center justify-center rounded-2xl text-white">
-          <RocketIcon className="size-7" />
-        </span>
+        <Rocket3D className="animate-float mx-auto size-24" />
         <h2 className="mt-4 text-xl font-bold">Mission control is getting ready</h2>
         <p className="mt-2 text-[15px] leading-relaxed text-muted">
           {dashboard.state === "no-squad"

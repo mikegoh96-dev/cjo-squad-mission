@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
+import { ArtDefs } from "@/components/art/art-defs";
 import { siteConfig } from "@/config/site";
 import "./globals.css";
 
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${jakarta.variable} h-full antialiased`}
     >
       <body className="flex min-h-dvh flex-col font-sans text-foreground">
+        <ArtDefs />
         {children}
       </body>
     </html>

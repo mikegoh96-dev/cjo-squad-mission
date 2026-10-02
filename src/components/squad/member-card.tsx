@@ -191,7 +191,7 @@ export function MemberCard({
             aria-label={`Remove a case from ${name}`}
             onClick={() => tap(-1)}
             disabled={display <= 0}
-            className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-surface-2 text-foreground transition-transform active:scale-90 disabled:opacity-35"
+            className="btn-3d btn-3d-soft flex size-11 shrink-0 items-center justify-center rounded-2xl disabled:opacity-35"
           >
             <MinusIcon className="size-5" />
           </button>
@@ -210,7 +210,7 @@ export function MemberCard({
             <span
               key={f.id}
               aria-hidden="true"
-              className="animate-float-up pointer-events-none absolute -top-7 text-[18px] font-extrabold text-accent"
+              className="animate-float-up btn-3d-brand pointer-events-none absolute -top-7 rounded-full px-2 py-0.5 text-[14px] font-extrabold"
             >
               {f.text}
             </span>
@@ -223,15 +223,15 @@ export function MemberCard({
             aria-label={`Add a case for ${name}`}
             onClick={() => tap(1)}
             disabled={display >= 1000}
-            className="bg-brand relative flex size-11 shrink-0 items-center justify-center rounded-2xl text-white shadow-[0_8px_18px_-8px_rgba(61,95,224,0.9)] transition-transform active:scale-90 disabled:opacity-35"
+            className="btn-3d btn-3d-brand relative flex size-11 shrink-0 items-center justify-center rounded-2xl disabled:opacity-35"
           >
-            <PlusIcon className="size-5" />
+            <PlusIcon className="size-5 drop-shadow-[0_1px_0_rgba(20,30,90,0.35)]" />
             {bump > 0
               ? BURST.map((b, i) => (
                   <span
                     key={`${bump}-${i}`}
                     aria-hidden="true"
-                    className="animate-burst pointer-events-none absolute top-1/2 left-1/2 size-1.5 rounded-full"
+                    className="animate-burst sparkle pointer-events-none absolute top-1/2 left-1/2 size-2.5"
                     style={
                       {
                         background: BURST_COLORS[b.hue],

@@ -1,5 +1,6 @@
 "use client";
 
+import { Gem3D } from "@/components/art/objects";
 import { UsersIcon } from "@/components/icons";
 import { Eyebrow } from "@/components/ui";
 import { pluralCases } from "@/lib/mission";
@@ -45,10 +46,13 @@ export function SquadBoard({
         </ul>
       )}
       <div
-        className="mt-3 flex items-center justify-between rounded-[22px] bg-accent-soft px-4 py-3.5"
+        className="mt-4 flex items-center justify-between rounded-[22px] bg-accent-soft px-4 py-3 shadow-tile"
         data-testid="squad-total"
       >
-        <span className="text-[15px] font-semibold text-accent-strong">Squad total</span>
+        <span className="flex items-center gap-2 text-[15px] font-bold text-accent-strong">
+          <Gem3D className="size-9" />
+          Squad total
+        </span>
         <span className="text-[19px] font-extrabold text-accent-strong tabular-nums">{pluralCases(total)}</span>
       </div>
     </section>

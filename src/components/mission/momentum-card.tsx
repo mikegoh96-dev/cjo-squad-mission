@@ -1,6 +1,6 @@
 "use client";
 
-import { FlameIcon } from "@/components/icons";
+import { Flame3D } from "@/components/art/objects";
 import { Avatar, Card, Eyebrow } from "@/components/ui";
 import { useLiveBoard } from "@/components/squad/live-board";
 import { liveMemberWeek } from "@/lib/board";
@@ -31,8 +31,8 @@ export function MomentumCard({
   return (
     <Card className="animate-rise [animation-delay:60ms]" aria-labelledby="momentum-title">
       <div className="flex items-center gap-3">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-flame-soft text-flame">
-          <FlameIcon className="size-6" />
+        <span className="relative flex size-14 shrink-0 items-center justify-center rounded-[18px] bg-flame-soft shadow-tile">
+          <Flame3D className="size-12" />
         </span>
         <div className="min-w-0">
           <Eyebrow>
@@ -44,13 +44,13 @@ export function MomentumCard({
         </div>
       </div>
       <dl className="mt-4 grid grid-cols-2 gap-3">
-        <div className="rounded-2xl bg-surface-2 px-4 py-3">
+        <div className="rounded-2xl bg-surface-2 px-4 py-3 shadow-[inset_0_1px_0_var(--card-highlight)]">
           <dt className="text-[13px] font-medium text-muted">Today</dt>
           <dd className="mt-0.5 text-[26px] leading-tight font-extrabold tabular-nums" data-testid="momentum-today">
             {formatDelta(today)}
           </dd>
         </div>
-        <div className="rounded-2xl bg-surface-2 px-4 py-3">
+        <div className="rounded-2xl bg-surface-2 px-4 py-3 shadow-[inset_0_1px_0_var(--card-highlight)]">
           <dt className="text-[13px] font-medium text-muted">This week</dt>
           <dd className="mt-0.5 text-[26px] leading-tight font-extrabold tabular-nums" data-testid="momentum-week">
             {formatDelta(thisWeek)}

@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { SparkleIcon, XIcon } from "@/components/icons";
+import { Star3D } from "@/components/art/objects";
+import { XIcon } from "@/components/icons";
 
 const COLORS = ["#3d5fe0", "#6a4ae0", "#16a34a", "#f5a524", "#f97316", "#ec4899"];
 // Fixed layout so server and client agree; motion is CSS-only and hidden for reduced motion.
@@ -128,8 +129,8 @@ export function Celebration({
           }}
           className="animate-toast flex touch-none items-center gap-3 rounded-[22px] bg-surface p-4 shadow-card ring-1 ring-hairline select-none"
         >
-          <span className="bg-brand flex size-11 shrink-0 items-center justify-center rounded-2xl text-white">
-            <SparkleIcon className="size-6" />
+          <span className="bg-brand flex size-12 shrink-0 items-center justify-center rounded-2xl shadow-[0_3px_0_var(--hero-lip)]">
+            <Star3D className="animate-unlock size-10" />
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-[16px] font-extrabold">{title}</p>
