@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { SparkleIcon } from "@/components/icons";
+import { SparkleIcon, XIcon } from "@/components/icons";
 
 const COLORS = ["#3d5fe0", "#6a4ae0", "#16a34a", "#f5a524", "#f97316", "#ec4899"];
 // Fixed layout so server and client agree; motion is CSS-only and hidden for reduced motion.
@@ -13,6 +13,10 @@ const PIECES = Array.from({ length: 18 }, (_, i) => ({
   color: COLORS[i % COLORS.length],
   round: i % 3 === 0,
 }));
+
+/** Drag further than this (px) sideways, or flick up this far, to dismiss. */
+const SWIPE_X = 80;
+const SWIPE_UP = 40;
 
 function readCelebrated(key: string): number | null {
   try {
@@ -61,7 +65,36 @@ export function Celebration({
     };
   }, [storageKey, cases]);
 
+  // Swipe to dismiss (left, right or up); taps elsewhere are unaffected.
+  const start = useRef<{ x: number; y: number } | null>(null);
+  const [drag, setDrag] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const [leaving, setLeaving] = useState<null | { x: number; y: number }>(null);
+  const dismiss = (dir = { x: 0, y: -1 }) => {
+    setLeaving({ x: dir.x * 420, y: dir.y * 160 });
+    window.setTimeout(() => setShow(false), 200);
+  };
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest("button")) return;
+    start.current = { x: e.clientX, y: e.clientY };
+    setDragging(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!start.current) return;
+    setDrag({ x: e.clientX - start.current.x, y: Math.min(0, e.clientY - start.current.y) });
+  };
+  const onPointerEnd = () => {
+    if (!start.current) return;
+    start.current = null;
+    setDragging(false);
+    if (Math.abs(drag.x) > SWIPE_X) dismiss({ x: Math.sign(drag.x), y: 0 });
+    else if (drag.y < -SWIPE_UP) dismiss({ x: 0, y: -1 });
+    else setDrag({ x: 0, y: 0 }); // snap back
+  };
+
   if (!show) return null;
+  const offset = leaving ?? drag;
   // Portal to <body>: a transformed (animating) ancestor would otherwise trap `position: fixed`.
   return createPortal(
     <div className="pointer-events-none fixed inset-0 z-40 overflow-hidden text-left" data-testid="celebration">
@@ -81,7 +114,20 @@ export function Celebration({
         />
       ))}
       <div className="pointer-events-auto mx-auto mt-[max(16px,env(safe-area-inset-top))] w-[calc(100%-32px)] max-w-md">
-        <div role="status" className="animate-toast flex items-center gap-3 rounded-[22px] bg-surface p-4 shadow-card ring-1 ring-hairline">
+        <div
+          role="status"
+          data-testid="celebration-toast"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerEnd}
+          onPointerCancel={onPointerEnd}
+          style={{
+            transform: `translate(${offset.x}px, ${offset.y}px)`,
+            opacity: leaving ? 0 : 1 - Math.min(0.6, Math.max(Math.abs(offset.x) / 300, Math.abs(offset.y) / 150)),
+            transition: dragging && !leaving ? "none" : "transform 200ms ease-out, opacity 200ms ease-out",
+          }}
+          className="animate-toast flex touch-none items-center gap-3 rounded-[22px] bg-surface p-4 shadow-card ring-1 ring-hairline select-none"
+        >
           <span className="bg-brand flex size-11 shrink-0 items-center justify-center rounded-2xl text-white">
             <SparkleIcon className="size-6" />
           </span>
@@ -91,10 +137,11 @@ export function Celebration({
           </div>
           <button
             type="button"
-            onClick={() => setShow(false)}
-            className="shrink-0 rounded-full px-3 py-2 text-[14px] font-semibold text-accent-strong"
+            aria-label="Dismiss"
+            onClick={() => dismiss()}
+            className="-mr-1 flex size-11 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 active:bg-surface-2"
           >
-            Nice!
+            <XIcon className="size-5" />
           </button>
         </div>
       </div>

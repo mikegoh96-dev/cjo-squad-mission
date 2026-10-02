@@ -61,7 +61,12 @@ export default async function DashboardPage() {
                 : null
           }
         />
-        <MomentumCard today={momentum.today} thisWeek={momentum.thisWeek} />
+        <MomentumCard
+          today={momentum.today}
+          thisWeek={momentum.thisWeek}
+          memberWeek={momentum.memberWeek}
+          people={progress.contributions.map((c) => ({ id: c.squadMemberId, name: c.displayName, initials: c.initials }))}
+        />
         <MonthCards months={progress.months} dayOfMonth={progress.dayOfMonth} />
       </LiveBoardProvider>
       {reached ? (

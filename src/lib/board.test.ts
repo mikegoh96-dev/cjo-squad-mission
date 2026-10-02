@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { CHEERS, applyTap, cheerFor, withLocalChanges } from "./board.ts";
+import { CHEERS, applyTap, cheerFor, liveMemberWeek, withLocalChanges } from "./board.ts";
 
 test("taps never go below 0 or above 1000", () => {
   assert.equal(applyTap(0, -1), 0);
@@ -25,4 +25,12 @@ test("optimistic totals: server values plus local changes", () => {
   assert.equal(withLocalChanges(server, { zz: 9 }).total, 8, "unknown members ignored");
   // Once the server catches up, the local change no longer adds anything.
   assert.equal(withLocalChanges({ a: 3, b: 2, c: 5 }, { b: 2 }).delta, 0);
+});
+
+test("each member's weekly contribution follows live taps", () => {
+  const serverWeek = { a: 2, b: 0 };
+  const serverCounts = { a: 5, b: 1, c: 0 };
+  assert.deepEqual(liveMemberWeek(serverWeek, serverCounts, serverCounts), { a: 2, b: 0, c: 0 });
+  assert.deepEqual(liveMemberWeek(serverWeek, serverCounts, { a: 7, b: 1, c: 1 }), { a: 4, b: 0, c: 1 });
+  assert.deepEqual(liveMemberWeek(serverWeek, serverCounts, { a: 4 }).a, 1, "a correction lowers it");
 });

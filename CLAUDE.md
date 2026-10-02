@@ -26,7 +26,8 @@ shows everywhere immediately.
 ## V1 scope
 
 Shared dashboard; October / November / December missions (current month
-featured); collective progress; team momentum (net cases today / this week);
+featured); collective progress; team momentum (net cases today / this week, plus each
+member's net this week listed A–Z, never ranked);
 monthly milestones (first case, 50%, 75%, target) with a short celebration;
 one big card per member (A–Z) on the dashboard with -/+ to update their
 count for the open month. Mobile-first. Anything else (notifications, chat, profiles, points,
@@ -44,7 +45,8 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
   card, hero, momentum and month card instantly (`LiveBoardProvider`,
   optimistic); after 600 ms without taps the card saves its new **total** once
   (`saveCaseCount` Server Action). + taps get a short hype animation (number
-  pop, floating +1, burst, cheer); squad milestones trigger a celebration.
+  pop, floating +1, burst, cheer); squad milestones trigger a celebration
+  banner (dismiss with × or by swiping it left, right or up).
   Counts belong to the open month, so every card starts at 0 when a new
   mission month begins. There is no separate update page.
 
@@ -73,7 +75,7 @@ The `(dashboard)` route group holds `/` and `/mission` with their
 | `src/lib/supabase/server.ts` | Server-only Supabase client (publishable key, no session) |
 | `src/lib/supabase/env.ts` | Reads and validates env vars |
 | `src/lib/supabase/database.types.ts` | **Generated** DB types (`npm run db:types`); never edit by hand |
-| `src/lib/data/dashboard.ts` | Dashboard data (V1: the oldest squad, current campaign) + momentum |
+| `src/lib/data/dashboard.ts` | Dashboard data (V1: the oldest squad, current campaign) + momentum (squad and per member; per-member is optional and hidden if unavailable) |
 | `src/lib/data/case-updates.ts` | `submitCaseCount` (the only write) |
 | `src/lib/board.ts` | Tap clamping, cheers, optimistic totals (unit-tested) |
 | `src/lib/mission.ts` | Pure mission maths: progress %, status, milestones, celebration, momentum, messages (unit-tested) |
@@ -132,8 +134,14 @@ Copy `.env.example` to `.env.local` (git-ignored).
   new objects are private until granted.
 - Apply to the hosted project: `npx supabase login`, `npx supabase link
   --project-ref <ref>`, then `npx supabase db push`.
-- Hosted project `tdmpukylkqgibfddedxi` (ap-southeast-1, Postgres 17): all
-  five migrations applied and recorded in `supabase_migrations.schema_migrations`.
+- Hosted project `tdmpukylkqgibfddedxi` (ap-southeast-1, Postgres 17): the
+  first five migrations are applied and recorded in
+  `supabase_migrations.schema_migrations`. `20261002095229_member_weekly_momentum`
+  must be applied too (SQL editor or `npx supabase db push`); until then the
+  per-member weekly list is simply hidden.
+- Types were last generated with `@supabase/postgres-meta` against the migrated
+  local database (`PG_META_GENERATE_TYPES_DETECT_ONE_TO_ONE_RELATIONSHIPS=true`,
+  `PG_META_POSTGREST_VERSION=14.18`), byte-identical to the hosted generator.
 - Tests: `supabase/tests/database/*.test.sql` (pgTAP), run with
   `npm run db:test` (needs `npx supabase start`, Docker).
 - After any migration, regenerate types (`npm run db:types`) and commit them.
@@ -153,7 +161,7 @@ The open month is resolved in the campaign's `time_zone`.
 
 | Role | Can | Cannot |
 | --- | --- | --- |
-| anon / authenticated | SELECT members, squads, squad_members, campaigns, monthly_targets, member_case_counts, squad_monthly_progress; call `submit_case_count(member, count, expected)`, `squad_momentum(squad)`, `member_recent_updates(member, limit)` (currently unused by the UI) | INSERT/UPDATE/DELETE any table; read raw `case_update_history` |
+| anon / authenticated | SELECT members, squads, squad_members, campaigns, monthly_targets, member_case_counts, squad_monthly_progress; call `submit_case_count(member, count, expected)`, `squad_momentum(squad)`, `squad_member_momentum(squad)`, `member_recent_updates(member, limit)` (currently unused by the UI) | INSERT/UPDATE/DELETE any table; read raw `case_update_history` |
 | service_role (admin CLI) | manage squads, members and counts | — |
 
 The functions are `security definer` with `search_path = ''`; private helpers

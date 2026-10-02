@@ -295,6 +295,14 @@ export type Database = {
           old_count: number
         }[]
       }
+      squad_member_momentum: {
+        Args: { p_squad_id: string }
+        Returns: {
+          squad_member_id: string
+          this_week: number
+          today: number
+        }[]
+      }
       squad_momentum: {
         Args: { p_squad_id: string }
         Returns: {

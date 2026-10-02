@@ -18,7 +18,12 @@ export type Dashboard =
     };
 
 /** Net cases added to the squad (campaign time zone); corrections count. */
-export type Momentum = { today: number; thisWeek: number };
+export type Momentum = {
+  today: number;
+  thisWeek: number;
+  /** Each member's net this week (squad member id -> cases); null if unavailable. */
+  memberWeek: Record<string, number> | null;
+};
 
 /**
  * Public squad dashboard data. Read-only queries with the publishable key;
@@ -62,7 +67,7 @@ export async function getDashboard(): Promise<Dashboard> {
   const memberships = squad.squad_members;
 
   const squadMemberIds = memberships.map((m) => m.id);
-  const [countResult, momentumResult] = await Promise.all([
+  const [countResult, momentumResult, memberMomentumResult] = await Promise.all([
     squadMemberIds.length
       ? supabase
           .from("member_case_counts")
@@ -71,11 +76,16 @@ export async function getDashboard(): Promise<Dashboard> {
           .in("squad_member_id", squadMemberIds)
       : Promise.resolve({ data: [], error: null }),
     supabase.rpc("squad_momentum", { p_squad_id: squad.id }),
+    supabase.rpc("squad_member_momentum", { p_squad_id: squad.id }),
   ]);
   if (countResult.error) throw countResult.error;
   if (momentumResult.error) throw momentumResult.error;
   const counts = countResult.data;
   const momentumRow = momentumResult.data?.[0];
+  // Per-member momentum is a nice-to-have: never fail the dashboard over it.
+  const memberWeek = memberMomentumResult.error
+    ? null
+    : Object.fromEntries((memberMomentumResult.data ?? []).map((r) => [r.squad_member_id, r.this_week]));
 
   const progress = computeSquadProgress({
     campaign,
@@ -102,7 +112,7 @@ export async function getDashboard(): Promise<Dashboard> {
     squadName: squad.name,
     memberCount: memberships.length,
     progress,
-    momentum: { today: momentumRow?.today ?? 0, thisWeek: momentumRow?.this_week ?? 0 },
+    momentum: { today: momentumRow?.today ?? 0, thisWeek: momentumRow?.this_week ?? 0, memberWeek },
     lastUpdatedAt,
   };
 }

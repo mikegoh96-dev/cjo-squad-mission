@@ -32,3 +32,19 @@ export function withLocalChanges(
   const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
   return { counts, delta, total };
 }
+
+/**
+ * Each member's net cases this week, live: the server's weekly figure plus
+ * whatever this screen has changed for them since that figure was loaded.
+ */
+export function liveMemberWeek(
+  serverWeek: Record<string, number>,
+  serverCounts: Record<string, number>,
+  counts: Record<string, number>,
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const id of Object.keys(serverCounts)) {
+    out[id] = (serverWeek[id] ?? 0) + ((counts[id] ?? serverCounts[id]) - serverCounts[id]);
+  }
+  return out;
+}

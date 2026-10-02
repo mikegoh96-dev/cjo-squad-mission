@@ -4,7 +4,7 @@
 -- independent of the date), squad Alpha (Mike, Jeremy), squad Bravo (Sarah).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(46);
+select plan(51);
 
 delete from public.campaigns;  -- isolate from real campaigns (rolled back)
 insert into public.campaigns (id, slug, name, starts_on, ends_on) values (
@@ -169,6 +169,24 @@ select results_eq(
   $$select today, this_week from public.squad_momentum('10000000-0000-0000-0000-0000000000ff')$$,
   $$values (0, 0)$$, 'an unknown squad has no momentum (not an error)');
 
+-- Per-member momentum: each member's net contribution (aggregates only)
+select results_eq(
+  $$select squad_member_id, today, this_week
+    from public.squad_member_momentum('10000000-0000-0000-0000-00000000000a') order by squad_member_id$$,
+  $$values ('20000000-0000-0000-0000-00000000000a'::uuid, 7, 7),
+           ('20000000-0000-0000-0000-00000000000b'::uuid, 4, 4)$$,
+  'Alpha per member: Mike +7, Jeremy +4 (his 8-day-old +2 is excluded)');
+select is(
+  (select sum(this_week)::int from public.squad_member_momentum('10000000-0000-0000-0000-00000000000a')),
+  (select this_week from public.squad_momentum('10000000-0000-0000-0000-00000000000a')),
+  'per-member contributions add up to the squad momentum');
+select results_eq(
+  $$select today, this_week from public.squad_member_momentum('10000000-0000-0000-0000-00000000000b')$$,
+  $$values (3, 3)$$, 'Bravo per member: Sarah nets +3');
+select is_empty(
+  $$select * from public.squad_member_momentum('10000000-0000-0000-0000-0000000000ff')$$,
+  'an unknown squad has no members');
+
 -- Recent updates for corrections
 select results_eq(
   $$select old_count, new_count from public.member_recent_updates('20000000-0000-0000-0000-00000000000a', 3)$$,
@@ -190,6 +208,17 @@ select results_eq(
     where squad_member_id = '20000000-0000-0000-0000-00000000000a' order by id$$,
   $$values (0, 6, null::uuid), (6, 7, null::uuid), (7, 8, null::uuid), (8, 7, null::uuid)$$,
   'history keeps every real change; the submitter is unknown (shared link)');
+
+-- A member with no changes still appears, at 0
+insert into public.members (id, display_name) values ('00000000-0000-0000-0000-00000000000d', 'Zed');
+insert into public.squad_members (id, squad_id, member_id)
+  values ('20000000-0000-0000-0000-00000000000d', '10000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-00000000000d');
+set local role anon;
+select results_eq(
+  $$select today, this_week from public.squad_member_momentum('10000000-0000-0000-0000-00000000000b')
+    where squad_member_id = '20000000-0000-0000-0000-00000000000d'$$,
+  $$values (0, 0)$$, 'a member with no changes this week shows 0');
+reset role;
 
 select * from finish();
 rollback;
