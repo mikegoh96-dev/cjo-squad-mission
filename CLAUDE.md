@@ -56,6 +56,10 @@ Without them the site still renders, but any Supabase call throws.
   automatic grants, so new objects are private until granted.
 - Apply to the hosted project: `npx supabase login`, `npx supabase link
   --project-ref <ref>`, then `npx supabase db push`.
+- Hosted project `tdmpukylkqgibfddedxi` (ap-southeast-1, Postgres 17): both
+  migrations applied 2026-10-02 and recorded in
+  `supabase_migrations.schema_migrations`, so `db push` sees them as applied.
+  pgTAP suite verified live (86/86, run inside a rolled-back transaction).
 - Tests: `supabase/tests/database/*.test.sql` (pgTAP), run with
   `npm run db:test` (needs the local stack: `npx supabase start`, Docker).
 
@@ -113,6 +117,13 @@ DAL in the page.
   `https://cjo-squad-mission-*-mikegoh96-devs-projects.vercel.app/**`.
 - Sign-ups: leave email sign-ups on for self-registration (new users wait for
   an admin to add them to a squad), or turn them off for invite-only.
+- **Custom SMTP is required for production.** Supabase's built-in email only
+  delivers to members of the Supabase organization's team, with a very low
+  hourly limit; squad members get no magic link until custom SMTP is set
+  (Authentication → Emails → SMTP Settings).
+- Vercel needs `NEXT_PUBLIC_SUPABASE_URL` and
+  `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` for Production and Preview (then
+  redeploy); without them protected routes fail closed to `/login`.
 - `supabase/config.toml` holds the equivalent **local** settings only.
 
 ## Authorization model (RLS)
