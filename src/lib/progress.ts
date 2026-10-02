@@ -11,6 +11,7 @@ import {
   missionStatus,
   monthMilestones,
 } from "./mission.ts";
+import { uniqueInitials } from "./initials.ts";
 
 export type Campaign = {
   id: string;
@@ -36,6 +37,8 @@ export type MonthMission = {
 export type Contribution = {
   squadMemberId: string;
   displayName: string;
+  /** Avatar initials, unique within the squad where names allow. */
+  initials: string;
   /** Cases in the featured month. */
   monthCases: number;
   /** Cases across the whole campaign. */
@@ -138,10 +141,12 @@ export function computeSquadProgress(input: {
   const milestones = monthMilestones(focus.progress, focus.label);
 
   const campaignMonths = new Set(targets.map((t) => t.month));
+  const initials = uniqueInitials(members.map((m) => ({ id: m.squadMemberId, name: m.displayName })));
   const contributions = members
     .map((m) => ({
       squadMemberId: m.squadMemberId,
       displayName: m.displayName,
+      initials: initials.get(m.squadMemberId) ?? "?",
       monthCases: sum((c) => c.squadMemberId === m.squadMemberId && c.month === focus.month),
       campaignCases: sum((c) => c.squadMemberId === m.squadMemberId && campaignMonths.has(c.month)),
     }))

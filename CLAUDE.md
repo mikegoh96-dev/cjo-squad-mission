@@ -16,6 +16,13 @@ Next.js 16 (App Router, `src/`), TypeScript, Tailwind CSS v4, Supabase
 (Postgres only; **no Supabase Auth**), hosted on Vercel. Run `npm run check`
 before pushing.
 
+**Performance:** Vercel functions run in Singapore (`vercel.json`
+`regions: ["sin1"]`), next to the database (ap-southeast-1). Keep database
+calls parallel (the dashboard needs two round trips). Visited and prefetched
+pages are reused for 30 s (`experimental.staleTimes`); bottom-nav links
+prefetch, and `saveCaseCount` calls `revalidatePath("/", "layout")` so a save
+shows everywhere immediately.
+
 ## V1 scope
 
 Shared dashboard; October / November / December missions (current month
@@ -66,6 +73,7 @@ The `(dashboard)` route group holds `/` and `/mission` with their
 | `src/lib/data/case-updates.ts` | `submitCaseCount`, `getRecentUpdates`, `getSquadMonthForMember` |
 | `src/lib/mission.ts` | Pure mission maths: progress %, status, milestones, celebration, momentum, messages (unit-tested) |
 | `src/lib/progress.ts` | Campaign/month phases, focus month, month filtering, contributions (unit-tested) |
+| `src/lib/initials.ts` | Avatar initials unique within the squad (Jamie JM, Jasmine JS; unit-tested) |
 | `src/lib/remembered-member.ts` | Remembered-member cookie (convenience, not a credential) |
 | `src/app/(dashboard)/` | Dashboard, Mission screen, loading skeleton, error state |
 | `src/app/update/` | Name picker + `update-screen.tsx`, `actions.ts` (`saveCaseCount`, `switchMember`) |

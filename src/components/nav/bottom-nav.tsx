@@ -16,6 +16,7 @@ export function BottomNav() {
     return (
       <Link
         href={href}
+        prefetch
         aria-current={active ? "page" : undefined}
         className={`${item} ${active ? "bg-accent-soft text-accent-strong" : "text-muted"}`}
       >
@@ -33,6 +34,7 @@ export function BottomNav() {
         {tab("/", "Squad", HomeIcon)}
         <Link
           href="/update"
+          prefetch
           aria-current={path === "/update" ? "page" : undefined}
           data-testid="nav-update"
           className="bg-brand flex h-12 flex-[1.3] items-center justify-center gap-1.5 rounded-2xl text-[15px] font-bold text-white shadow-[0_8px_20px_-8px_rgba(61,95,224,0.8)] transition-transform active:scale-[0.97]"

@@ -29,10 +29,20 @@ export type Momentum = { today: number; thisWeek: number };
 export async function getDashboard(): Promise<Dashboard> {
   const supabase = createClient();
 
-  const { data: campaigns, error: campaignError } = await supabase
-    .from("campaigns")
-    .select("id, name, starts_on, ends_on, time_zone");
-  if (campaignError) throw campaignError;
+  // Two parallel round trips in total: (campaigns + targets, squad + members),
+  // then (counts, momentum). Latency to the database dominates page time.
+  const [campaignResult, squadResult] = await Promise.all([
+    supabase.from("campaigns").select("id, name, starts_on, ends_on, time_zone, monthly_targets (month, target_cases)"),
+    supabase
+      .from("squads")
+      .select("id, name, squad_members (id, members (display_name))")
+      .order("created_at")
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  if (campaignResult.error) throw campaignResult.error;
+  if (squadResult.error) throw squadResult.error;
+  const campaigns = campaignResult.data;
 
   const campaign = pickCurrentCampaign(
     campaigns.map((c) => ({
@@ -45,20 +55,11 @@ export async function getDashboard(): Promise<Dashboard> {
   );
   if (!campaign) return { state: "no-campaign" };
 
-  const [targets, squad] = await Promise.all([
-    supabase.from("monthly_targets").select("month, target_cases").eq("campaign_id", campaign.id),
-    supabase.from("squads").select("id, name").order("created_at").limit(1).maybeSingle(),
-  ]);
-  if (targets.error) throw targets.error;
-  if (squad.error) throw squad.error;
-  if (targets.data.length === 0) return { state: "no-targets", campaignName: campaign.name };
-  if (!squad.data) return { state: "no-squad", campaignName: campaign.name };
-
-  const { data: memberships, error: memberError } = await supabase
-    .from("squad_members")
-    .select("id, members (display_name)")
-    .eq("squad_id", squad.data.id);
-  if (memberError) throw memberError;
+  const targets = campaigns.find((c) => c.id === campaign.id)?.monthly_targets ?? [];
+  const squad = squadResult.data;
+  if (targets.length === 0) return { state: "no-targets", campaignName: campaign.name };
+  if (!squad) return { state: "no-squad", campaignName: campaign.name };
+  const memberships = squad.squad_members;
 
   const squadMemberIds = memberships.map((m) => m.id);
   const [countResult, momentumResult] = await Promise.all([
@@ -69,7 +70,7 @@ export async function getDashboard(): Promise<Dashboard> {
           .eq("campaign_id", campaign.id)
           .in("squad_member_id", squadMemberIds)
       : Promise.resolve({ data: [], error: null }),
-    supabase.rpc("squad_momentum", { p_squad_id: squad.data.id }),
+    supabase.rpc("squad_momentum", { p_squad_id: squad.id }),
   ]);
   if (countResult.error) throw countResult.error;
   if (momentumResult.error) throw momentumResult.error;
@@ -78,7 +79,7 @@ export async function getDashboard(): Promise<Dashboard> {
 
   const progress = computeSquadProgress({
     campaign,
-    targets: targets.data.map((t) => ({ month: t.month, targetCases: t.target_cases })),
+    targets: targets.map((t) => ({ month: t.month, targetCases: t.target_cases })),
     members: memberships.map((m) => ({ squadMemberId: m.id, displayName: m.members.display_name })),
     counts: counts.map((c) => ({
       squadMemberId: c.squad_member_id,
@@ -97,8 +98,8 @@ export async function getDashboard(): Promise<Dashboard> {
   return {
     state: "ready",
     campaignName: campaign.name,
-    squadId: squad.data.id,
-    squadName: squad.data.name,
+    squadId: squad.id,
+    squadName: squad.name,
     memberCount: memberships.length,
     progress,
     momentum: { today: momentumRow?.today ?? 0, thisWeek: momentumRow?.this_week ?? 0 },

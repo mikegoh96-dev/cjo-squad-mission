@@ -30,7 +30,7 @@ export function SquadList({
         <ul className="mt-2 divide-y divide-hairline" data-testid="squad-list">
           {contributions.map((c) => (
             <li key={c.squadMemberId} className="flex items-center gap-3 py-3">
-              <Avatar name={c.displayName} id={c.squadMemberId} />
+              <Avatar name={c.displayName} id={c.squadMemberId} initials={c.initials} />
               <span className="min-w-0 flex-1 truncate text-[16px] font-semibold">{c.displayName}</span>
               <span className="shrink-0 rounded-full bg-surface-2 px-3 py-1 text-[14px] font-bold tabular-nums">
                 {pluralCases(c.monthCases)}

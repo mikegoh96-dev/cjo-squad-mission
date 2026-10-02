@@ -1,4 +1,5 @@
 // Small presentational primitives shared by the screens.
+import { initialsFor } from "@/lib/initials";
 
 export function Card({
   children,
@@ -121,26 +122,31 @@ const AVATAR_TINTS = [
   "bg-[#e0f3f8] text-[#1f6f86] dark:bg-[#102f38] dark:text-[#86d4ea]",
 ];
 
-export function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const letters = parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : (parts[0] ?? "?").slice(0, 2);
-  return letters.toUpperCase();
-}
-
 function tintFor(key: string) {
   let h = 0;
   for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   return AVATAR_TINTS[h % AVATAR_TINTS.length];
 }
 
-export function Avatar({ name, id, size = "md" }: { name: string; id: string; size?: "sm" | "md" | "lg" }) {
+export function Avatar({
+  name,
+  id,
+  initials,
+  size = "md",
+}: {
+  name: string;
+  id: string;
+  /** Squad-unique initials (from progress); falls back to the name's own. */
+  initials?: string;
+  size?: "sm" | "md" | "lg";
+}) {
   const dims = { sm: "size-8 text-[11px]", md: "size-11 text-sm", lg: "size-14 text-base" }[size];
   return (
     <span
       aria-hidden="true"
       className={`flex shrink-0 items-center justify-center rounded-full font-bold ${dims} ${tintFor(id)}`}
     >
-      {initials(name)}
+      {initials ?? initialsFor(name)}
     </span>
   );
 }

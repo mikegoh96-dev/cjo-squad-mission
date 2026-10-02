@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   type RecentUpdate,
@@ -66,6 +67,7 @@ export async function saveCaseCount(input: {
   if (result.status === "conflict") return { status: "conflict", currentCount: result.caseCount };
 
   await rememberMember(squadMemberId); // next time "Update" opens straight to this member
+  if (result.status === "saved") revalidatePath("/", "layout"); // purge cached pages: show the new total everywhere
 
   const [squad, recent] = await Promise.all([
     getSquadMonthForMember(squadMemberId, result.month).catch(() => null),
@@ -94,5 +96,6 @@ export async function saveCaseCount(input: {
 /** "Not you?": forget the remembered member and show the name picker. */
 export async function switchMember() {
   await forgetMember();
+  revalidatePath("/update");
   redirect("/update");
 }

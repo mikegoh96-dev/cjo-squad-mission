@@ -41,7 +41,7 @@ export function UpdateScreen({
   otherMonths,
   recent: initialRecent,
 }: {
-  member: { id: string; name: string };
+  member: { id: string; name: string; initials: string };
   squadName: string;
   month: { key: string; label: string };
   initialCount: number;
@@ -94,7 +94,7 @@ export function UpdateScreen({
   return (
     <>
       <Card className="animate-rise flex items-center gap-3 !p-4" aria-label="Updating for">
-        <Avatar name={member.name} id={member.id} size="lg" />
+        <Avatar name={member.name} id={member.id} initials={member.initials} size="lg" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-[19px] font-extrabold" data-testid="member-name">
             {member.name}

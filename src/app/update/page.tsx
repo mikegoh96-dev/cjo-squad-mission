@@ -24,7 +24,14 @@ export const metadata: Metadata = {
  */
 export default async function UpdatePage({ searchParams }: PageProps<"/update">) {
   await connection();
-  const [{ member }, dashboard] = await Promise.all([searchParams, getDashboard()]);
+  const { member } = await searchParams;
+  const requested = isUuid(member) ? member.toLowerCase() : null;
+  const chosenId = requested ?? (await getRememberedMember());
+  // Load the chosen member's recent updates in parallel with the squad data.
+  const [dashboard, recent] = await Promise.all([
+    getDashboard(),
+    chosenId ? getRecentUpdates(chosenId).catch(() => null) : Promise.resolve(null),
+  ]);
 
   if (dashboard.state !== "ready" || dashboard.progress.contributions.length === 0) {
     return (
@@ -61,8 +68,6 @@ export default async function UpdatePage({ searchParams }: PageProps<"/update">)
     );
   }
 
-  const requested = isUuid(member) ? member.toLowerCase() : null;
-  const chosenId = requested ?? (await getRememberedMember());
   const selected = progress.contributions.find((c) => c.squadMemberId === chosenId);
 
   if (!selected) {
@@ -73,12 +78,11 @@ export default async function UpdatePage({ searchParams }: PageProps<"/update">)
     );
   }
 
-  const recent = await getRecentUpdates(selected.squadMemberId).catch(() => null);
   return (
     <AppShell eyebrow="Update cases" title="How are you doing today?">
       <UpdateScreen
         key={selected.squadMemberId}
-        member={{ id: selected.squadMemberId, name: selected.displayName }}
+        member={{ id: selected.squadMemberId, name: selected.displayName, initials: selected.initials }}
         squadName={squadName}
         month={{ key: focus.month, label: focus.label }}
         initialCount={selected.monthCases}
@@ -103,7 +107,7 @@ function MemberPicker({ members, monthLabel }: { members: Contribution[]; monthL
               className="flex h-full flex-col items-start gap-3 rounded-[24px] bg-surface p-4 shadow-card transition-transform active:scale-[0.98]"
               data-testid="pick-member"
             >
-              <Avatar name={m.displayName} id={m.squadMemberId} size="lg" />
+              <Avatar name={m.displayName} id={m.squadMemberId} initials={m.initials} size="lg" />
               <span className="flex w-full items-end justify-between gap-2">
                 <span className="min-w-0">
                   <span className="block truncate text-[16px] font-bold">{m.displayName}</span>

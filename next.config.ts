@@ -13,6 +13,11 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   typedRoutes: true,
+  experimental: {
+    // Reuse visited/prefetched pages for 30s so switching tabs is instant.
+    // Saving a count purges this cache (revalidatePath in saveCaseCount).
+    staleTimes: { dynamic: 30, static: 30 },
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

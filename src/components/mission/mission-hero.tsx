@@ -74,6 +74,7 @@ export function MissionHero({
       {canUpdate ? (
         <Link
           href="/update"
+          prefetch
           data-testid="update-cta"
           className="relative mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-white text-[17px] font-bold text-[#2f54d6] shadow-[0_8px_20px_-10px_rgba(0,0,0,0.35)] transition-transform active:scale-[0.98]"
         >
