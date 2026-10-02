@@ -1,12 +1,19 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  crossedMilestone,
   daysInMonth,
+  formatDelta,
+  heroMessage,
   missionProgress,
   missionStatus,
+  momentumHeadline,
+  monthMilestones,
+  nextMilestone,
   pluralCases,
   relativeTime,
   remainingMessage,
+  unlockMessage,
 } from "./mission.ts";
 
 const cases: Array<[number, number, number, number, number, boolean, number]> = [
@@ -82,4 +89,69 @@ test("calendar helpers", () => {
   assert.equal(relativeTime(new Date("2026-10-02T09:55:00Z"), now), "5 min ago");
   assert.equal(relativeTime(new Date("2026-10-02T07:00:00Z"), now), "3 h ago");
   assert.equal(relativeTime(new Date("2026-09-30T10:00:00Z"), now), "2 days ago");
+});
+
+test("monthly milestones: first case, 50%, 75%, target", () => {
+  const ms = (total: number, target: number) =>
+    monthMilestones(missionProgress(total, target), "October").map((m) => [m.label, m.cases, m.reached]);
+  assert.deepEqual(ms(0, 20), [
+    ["Mission started", 1, false], ["Halfway there", 10, false], ["Momentum", 15, false], ["October cleared", 20, false],
+  ]);
+  assert.deepEqual(ms(15, 20).map((m) => m[2]), [true, true, true, false]);
+  assert.deepEqual(ms(30, 30).map((m) => m[1]), [1, 15, 23, 30]); // 75% of 30 rounds up
+  assert.deepEqual(ms(40, 40).map((m) => m[2]), [true, true, true, true]);
+  // Tiny targets: coinciding steps keep the bigger name, no duplicates.
+  assert.deepEqual(ms(0, 1), [["October cleared", 1, false]]);
+  assert.deepEqual(ms(0, 2).map((m) => m[0]), ["Halfway there", "October cleared"]);
+  assert.equal(nextMilestone(monthMilestones(missionProgress(12, 20), "October"))?.label, "Momentum");
+  assert.equal(nextMilestone(monthMilestones(missionProgress(21, 20), "October")), null);
+});
+
+test("crossing a milestone triggers one celebration (the highest)", () => {
+  assert.equal(crossedMilestone(0, 1, 20, "October")?.key, "started");
+  assert.equal(crossedMilestone(9, 10, 20, "October")?.key, "halfway");
+  assert.equal(crossedMilestone(8, 20, 20, "October")?.key, "cleared"); // skips past halfway + momentum
+  assert.equal(crossedMilestone(10, 12, 20, "October"), null); // between milestones
+  assert.equal(crossedMilestone(20, 25, 20, "October"), null); // already cleared
+  assert.equal(crossedMilestone(12, 9, 20, "October"), null); // corrections never celebrate
+  assert.equal(crossedMilestone(5, 5, 20, "October"), null);
+  assert.throws(() => crossedMilestone(-1, 5, 20, "October"), RangeError);
+});
+
+test("momentum formatting", () => {
+  assert.equal(formatDelta(6), "+6");
+  assert.equal(formatDelta(0), "0");
+  assert.equal(formatDelta(-2), "−2");
+  assert.throws(() => formatDelta(Number.NaN), RangeError);
+  assert.equal(momentumHeadline(6, 18), "6 cases added today");
+  assert.equal(momentumHeadline(1, 1), "1 case added today");
+  assert.equal(momentumHeadline(0, 18), "18 cases added this week");
+  assert.equal(momentumHeadline(0, 0), "Every case counts. Add the first one today.");
+  assert.equal(momentumHeadline(-2, -2), "Every case counts. Add the first one today.");
+});
+
+test("large values stay exact", () => {
+  const p = missionProgress(1000, 20);
+  assert.equal(p.percent, 5000);
+  assert.equal(p.meterPercent, 100);
+  assert.equal(p.exceededBy, 980);
+  assert.equal(p.remaining, 0);
+});
+
+test("hero message is collective", () => {
+  assert.equal(heroMessage(missionProgress(17, 20), "current", "October"), "We're 3 cases away");
+  assert.equal(heroMessage(missionProgress(19, 20), "current", "October"), "We're 1 case away");
+  assert.equal(heroMessage(missionProgress(20, 20), "current", "October"), "October cleared. We did it together!");
+  assert.equal(heroMessage(missionProgress(22, 20), "current", "October"), "October cleared · 2 cases above target");
+  assert.equal(heroMessage(missionProgress(0, 30), "upcoming", "November"), "Starts 1 November · 30 cases to go");
+  assert.equal(heroMessage(missionProgress(35, 40), "past", "December"), "December closed 5 short");
+});
+
+test("unlock message points at the next milestone", () => {
+  const p = missionProgress(13, 20);
+  assert.equal(unlockMessage(p, nextMilestone(monthMilestones(p, "October"))), "2 more cases to unlock Momentum");
+  const q = missionProgress(14, 20);
+  assert.equal(unlockMessage(q, nextMilestone(monthMilestones(q, "October"))), "1 more case to unlock Momentum");
+  const done = missionProgress(20, 20);
+  assert.equal(unlockMessage(done, nextMilestone(monthMilestones(done, "October"))), "Every milestone unlocked");
 });

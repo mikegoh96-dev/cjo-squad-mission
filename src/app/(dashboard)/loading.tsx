@@ -9,7 +9,7 @@ function Bar({ className, onPage = false }: { className: string; onPage?: boolea
 export default function Loading() {
   return (
     <main
-      className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 pt-[max(24px,env(safe-area-inset-top))] pb-36"
+      className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 pt-[max(20px,env(safe-area-inset-top))] pb-32"
       aria-busy="true"
       data-testid="loading-state"
     >
@@ -17,43 +17,27 @@ export default function Loading() {
         Loading squad progress…
       </span>
       <div className="px-1 pt-2">
-        <Bar onPage className="h-3 w-24" />
-        <Bar onPage className="mt-3 h-8 w-48" />
+        <Bar onPage className="h-3 w-28" />
+        <Bar onPage className="mt-3 h-8 w-60" />
         <Bar onPage className="mt-3 h-3 w-40" />
       </div>
+      <div className="animate-shimmer bg-brand h-[300px] rounded-[32px] opacity-40" />
       <Card>
-        <div className="flex justify-between">
-          <Bar className="h-3 w-32" />
-          <Bar className="h-7 w-28" />
+        <div className="flex items-center gap-3">
+          <div className="animate-shimmer size-11 rounded-2xl bg-surface-2" />
+          <Bar className="h-5 flex-1" />
         </div>
-        <Bar className="mt-5 h-14 w-40" />
-        <Bar className="mt-5 h-3.5 w-full" />
-        <div className="mt-3 flex justify-between">
-          <Bar className="h-5 w-12" />
-          <Bar className="h-4 w-36" />
-        </div>
-      </Card>
-      <Card>
-        <Bar className="h-3 w-28" />
-        <div className="mt-4 grid grid-cols-3 justify-items-center gap-2">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="flex flex-col items-center gap-2">
-              <div className="animate-shimmer size-10 rounded-full bg-surface-2" />
-              <Bar className="h-3 w-10" />
-            </div>
-          ))}
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="animate-shimmer h-16 rounded-2xl bg-surface-2" />
+          <div className="animate-shimmer h-16 rounded-2xl bg-surface-2" />
         </div>
       </Card>
-      <Card>
-        <Bar className="h-3 w-24" />
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="mt-4 flex items-center gap-3">
-            <div className="animate-shimmer size-9 rounded-full bg-surface-2" />
-            <Bar className="h-4 flex-1" />
-            <Bar className="h-4 w-16" />
-          </div>
-        ))}
-      </Card>
+      {[0, 1, 2].map((i) => (
+        <Card key={i} className="flex items-center gap-4 !p-4">
+          <div className="animate-shimmer size-14 rounded-full bg-surface-2" />
+          <Bar className="h-5 flex-1" />
+        </Card>
+      ))}
     </main>
   );
 }

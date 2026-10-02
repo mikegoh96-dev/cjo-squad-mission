@@ -9,15 +9,21 @@ export type Dashboard =
   | {
       state: "ready";
       campaignName: string;
+      squadId: string;
       squadName: string;
       memberCount: number;
       progress: SquadProgress;
+      momentum: Momentum;
       lastUpdatedAt: string | null;
     };
 
+/** Net cases added to the squad (campaign time zone); corrections count. */
+export type Momentum = { today: number; thisWeek: number };
+
 /**
  * Public squad dashboard data. Read-only queries with the publishable key;
- * never selects anything private (no tokens, no history).
+ * never selects anything private (raw history stays private; momentum is an
+ * aggregate from squad_momentum).
  * V1 shows the single squad (the oldest one if several exist).
  */
 export async function getDashboard(): Promise<Dashboard> {
@@ -55,14 +61,20 @@ export async function getDashboard(): Promise<Dashboard> {
   if (memberError) throw memberError;
 
   const squadMemberIds = memberships.map((m) => m.id);
-  const { data: counts, error: countError } = squadMemberIds.length
-    ? await supabase
-        .from("member_case_counts")
-        .select("squad_member_id, month, case_count, updated_at")
-        .eq("campaign_id", campaign.id)
-        .in("squad_member_id", squadMemberIds)
-    : { data: [], error: null };
-  if (countError) throw countError;
+  const [countResult, momentumResult] = await Promise.all([
+    squadMemberIds.length
+      ? supabase
+          .from("member_case_counts")
+          .select("squad_member_id, month, case_count, updated_at")
+          .eq("campaign_id", campaign.id)
+          .in("squad_member_id", squadMemberIds)
+      : Promise.resolve({ data: [], error: null }),
+    supabase.rpc("squad_momentum", { p_squad_id: squad.data.id }),
+  ]);
+  if (countResult.error) throw countResult.error;
+  if (momentumResult.error) throw momentumResult.error;
+  const counts = countResult.data;
+  const momentumRow = momentumResult.data?.[0];
 
   const progress = computeSquadProgress({
     campaign,
@@ -75,17 +87,21 @@ export async function getDashboard(): Promise<Dashboard> {
     })),
   });
 
-  const lastUpdatedAt = counts.reduce<string | null>(
-    (latest, c) => (latest === null || c.updated_at > latest ? c.updated_at : latest),
-    null,
-  );
+  const lastUpdatedAt =
+    momentumRow?.last_change_at ??
+    counts.reduce<string | null>(
+      (latest, c) => (latest === null || c.updated_at > latest ? c.updated_at : latest),
+      null,
+    );
 
   return {
     state: "ready",
     campaignName: campaign.name,
+    squadId: squad.data.id,
     squadName: squad.data.name,
     memberCount: memberships.length,
     progress,
+    momentum: { today: momentumRow?.today ?? 0, thisWeek: momentumRow?.this_week ?? 0 },
     lastUpdatedAt,
   };
 }

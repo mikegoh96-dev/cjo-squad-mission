@@ -4,10 +4,12 @@
 import {
   type MissionProgress,
   type MissionStatus,
+  type MonthMilestone,
   type MonthPhase,
   daysInMonth,
   missionProgress,
   missionStatus,
+  monthMilestones,
 } from "./mission.ts";
 
 export type Campaign = {
@@ -31,8 +33,6 @@ export type MonthMission = {
   status: MissionStatus;
 };
 
-export type Milestone = { percent: number; cases: number; reached: boolean };
-
 export type Contribution = {
   squadMemberId: string;
   displayName: string;
@@ -49,12 +49,10 @@ export type SquadProgress = {
   focus: MonthMission;
   dayOfMonth: number;
   overall: MissionProgress;
-  milestones: Milestone[];
+  /** Milestones of the featured month. */
+  milestones: MonthMilestone[];
   contributions: Contribution[];
 };
-
-/** Milestones as fractions of the overall target (product config, not data). */
-export const MILESTONE_PERCENTS = [25, 50, 75, 100] as const;
 
 /** Today's date (YYYY-MM-DD) in the given IANA time zone. */
 export function todayIn(timeZone: string, now: Date = new Date()): string {
@@ -137,10 +135,7 @@ export function computeSquadProgress(input: {
     months.reduce((total, m) => total + m.progress.target, 0),
   );
 
-  const milestones = MILESTONE_PERCENTS.map((p) => {
-    const cases = Math.ceil((overall.target * p) / 100);
-    return { percent: p, cases, reached: overall.total >= cases };
-  });
+  const milestones = monthMilestones(focus.progress, focus.label);
 
   const campaignMonths = new Set(targets.map((t) => t.month));
   const contributions = members

@@ -12,7 +12,7 @@
     "test": "node --test \"src/**/*.test.ts\"",
     "db:test": "supabase test db",
     "db:types": "supabase gen types typescript --linked --schema public > src/lib/supabase/database.types.ts",
-    "links": "node --env-file-if-exists=.env.local scripts/update-links.mjs",
+    "members": "node --env-file-if-exists=.env.local scripts/members.mjs",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {

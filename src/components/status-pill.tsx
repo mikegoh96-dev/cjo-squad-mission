@@ -12,8 +12,9 @@ const STYLE: Record<MissionStatus, { className: string; Icon: (p: { className?: 
   closed: { className: "bg-surface-2 text-muted", Icon: FlagIcon },
 };
 
-export function StatusPill({ status }: { status: MissionStatus }) {
-  const { className, Icon } = STYLE[status];
+export function StatusPill({ status, onBrand = false }: { status: MissionStatus; onBrand?: boolean }) {
+  const { Icon } = STYLE[status];
+  const className = onBrand ? "bg-white/20 text-white" : STYLE[status].className;
   return (
     <span
       data-testid="mission-status"

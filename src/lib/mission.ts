@@ -107,3 +107,95 @@ export function relativeTime(from: Date, now: Date = new Date()): string {
   const days = Math.floor(hours / 24);
   return `${days} ${days === 1 ? "day" : "days"} ago`;
 }
+
+// ---------------------------------------------------------------------------
+// Monthly milestones: lightweight, collective markers on the way to a target.
+// Defined as shares of the month's target so they follow the data.
+// ---------------------------------------------------------------------------
+
+export type MilestoneKey = "started" | "halfway" | "momentum" | "cleared";
+
+export type MonthMilestone = { key: MilestoneKey; label: string; cases: number; reached: boolean };
+
+/** First case, 50%, 75% and 100% of the month's target. */
+export function monthMilestones(progress: MissionProgress, monthLabel: string): MonthMilestone[] {
+  const { target, total } = progress;
+  const steps: Array<[MilestoneKey, string, number]> = [
+    ["started", "Mission started", 1],
+    ["halfway", "Halfway there", Math.ceil(target / 2)],
+    ["momentum", "Momentum", Math.ceil((target * 3) / 4)],
+    ["cleared", `${monthLabel} cleared`, target],
+  ];
+  // Small targets can make steps coincide; keep the later (bigger) name.
+  const byCases = new Map<number, [MilestoneKey, string]>();
+  for (const [key, label, cases] of steps) byCases.set(cases, [key, label]);
+  return [...byCases.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([cases, [key, label]]) => ({ key, label, cases, reached: total >= cases }));
+}
+
+/** The next milestone still to reach, or null when the month is cleared. */
+export function nextMilestone(milestones: MonthMilestone[]): MonthMilestone | null {
+  return milestones.find((m) => !m.reached) ?? null;
+}
+
+/**
+ * The highest milestone crossed by moving the squad total from `before` to
+ * `after` (only upward moves celebrate), or null.
+ */
+export function crossedMilestone(
+  before: number,
+  after: number,
+  target: number,
+  monthLabel: string,
+): MonthMilestone | null {
+  assertCount(before, "before");
+  assertCount(after, "after");
+  if (after <= before) return null;
+  const crossed = monthMilestones(missionProgress(after, target), monthLabel).filter(
+    (m) => m.cases > before && m.cases <= after,
+  );
+  return crossed.at(-1) ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Team momentum (net change, so corrections count honestly)
+// ---------------------------------------------------------------------------
+
+/** "+6", "0", "−2" (true minus sign). */
+export function formatDelta(n: number): string {
+  if (!Number.isInteger(n)) throw new RangeError(`delta must be an integer, got ${n}`);
+  return n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : "0";
+}
+
+export function momentumHeadline(today: number, thisWeek: number): string {
+  if (today > 0) return `${pluralCases(today)} added today`;
+  if (thisWeek > 0) return `${pluralCases(thisWeek)} added this week`;
+  return "Every case counts. Add the first one today.";
+}
+
+/** The hero line: "We're 3 cases away" — collective, never individual. */
+export function heroMessage(progress: MissionProgress, phase: MonthPhase, monthLabel: string): string {
+  if (phase === "upcoming") return `Starts 1 ${monthLabel} · ${pluralCases(progress.target)} to go`;
+  if (progress.exceededBy > 0) return `${monthLabel} cleared · ${pluralCases(progress.exceededBy)} above target`;
+  if (progress.complete) return `${monthLabel} cleared. We did it together!`;
+  if (phase === "past") return `${monthLabel} closed ${progress.remaining} short`;
+  return `We're ${pluralCases(progress.remaining)} away`;
+}
+
+/** "2 more cases to unlock Momentum" / "Every milestone unlocked". */
+export function unlockMessage(progress: MissionProgress, next: MonthMilestone | null): string {
+  if (!next) return "Every milestone unlocked";
+  const n = next.cases - progress.total;
+  return `${n} more ${n === 1 ? "case" : "cases"} to unlock ${next.label}`;
+}
+
+export const ENCOURAGEMENT: Record<MissionStatus, string> = {
+  complete: "Mission cleared!",
+  "almost-there": "Final push!",
+  "on-track": "Keep pushing",
+  "behind-pace": "Let's build momentum",
+  "not-started": "Let's get started",
+  upcoming: "Get ready",
+  closed: "Month closed",
+};

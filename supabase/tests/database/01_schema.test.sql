@@ -1,7 +1,7 @@
 -- Schema, privileges and data-integrity tests. Run with: npx supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(37);
+select plan(31);
 
 -- ---------------------------------------------------------------------------
 -- Tables, RLS and the derived progress view
@@ -10,7 +10,7 @@ select tables_are(
   'public',
   array[
     'members', 'squads', 'squad_members', 'campaigns', 'monthly_targets',
-    'member_case_counts', 'case_update_history', 'member_update_tokens'
+    'member_case_counts', 'case_update_history'
   ],
   'public schema contains exactly the application tables'
 );
@@ -61,9 +61,6 @@ select table_privs_are('public', 'monthly_targets', 'anon', array['SELECT'], 'an
 select table_privs_are('public', 'member_case_counts', 'anon', array['SELECT'], 'anon: read-only member_case_counts');
 select table_privs_are('public', 'squad_monthly_progress', 'anon', array['SELECT'], 'anon: read-only progress view');
 select table_privs_are('public', 'case_update_history', 'anon', array[]::text[], 'anon: no access to history');
-select table_privs_are('public', 'member_update_tokens', 'anon', array[]::text[], 'anon: no access to tokens');
-select table_privs_are('public', 'member_update_tokens', 'authenticated', array[]::text[], 'authenticated: no access to tokens');
-select table_privs_are('public', 'member_update_tokens', 'service_role', array[]::text[], 'service_role: no direct access to tokens');
 select table_privs_are('public', 'member_case_counts', 'authenticated', array['SELECT'], 'authenticated: read-only counts');
 
 select is(
@@ -84,29 +81,28 @@ select is(
 );
 
 -- ---------------------------------------------------------------------------
--- Functions: token-gated API for everyone, admin functions for service_role
+-- Functions: the only write path and the read-only dashboard helpers
 -- ---------------------------------------------------------------------------
-select function_privs_are('public', 'get_update_context', array['text'], 'anon', array['EXECUTE'],
-  'anon can load an update link');
-select function_privs_are('public', 'submit_case_count', array['text', 'integer', 'integer'], 'anon', array['EXECUTE'],
-  'anon can submit with an update link');
-select function_privs_are('public', 'admin_issue_update_token', array['uuid'], 'anon', array[]::text[],
-  'anon cannot issue links');
-select function_privs_are('public', 'admin_revoke_update_token', array['uuid'], 'anon', array[]::text[],
-  'anon cannot revoke links');
-select function_privs_are('public', 'admin_update_link_status', array[]::text[], 'anon', array[]::text[],
-  'anon cannot list link status');
-select function_privs_are('public', 'admin_issue_update_token', array['uuid'], 'authenticated', array[]::text[],
-  'authenticated cannot issue links');
-select function_privs_are('public', 'admin_issue_update_token', array['uuid'], 'service_role', array['EXECUTE'],
-  'service_role can issue links');
+select function_privs_are('public', 'submit_case_count', array['uuid', 'integer', 'integer'], 'anon', array['EXECUTE'],
+  'anon can submit a count through the controlled function');
+select function_privs_are('public', 'squad_momentum', array['uuid'], 'anon', array['EXECUTE'],
+  'anon can read squad momentum');
+select function_privs_are('public', 'member_recent_updates', array['uuid', 'integer'], 'anon', array['EXECUTE'],
+  'anon can read a member''s recent updates');
 select is(
   (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'submit_case_count'),
   1,
-  'submit_case_count has a single signature (token, count, expected): no member id parameter'
+  'submit_case_count has a single signature (member, count, expected)'
 );
-select ok(not has_function_privilege('anon', 'private.member_for_token(text)', 'EXECUTE'),
+select is(
+  (select count(*)::int from pg_proc
+   where proname in ('get_update_context', 'admin_issue_update_token', 'admin_revoke_update_token',
+                     'admin_update_link_status', 'member_for_token', 'token_hash')),
+  0,
+  'private update-link functions are gone'
+);
+select ok(not has_function_privilege('anon', 'private.current_campaign_month()', 'EXECUTE'),
   'private helpers are not executable by API roles');
 
 -- ---------------------------------------------------------------------------

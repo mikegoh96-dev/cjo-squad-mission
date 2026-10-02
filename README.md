@@ -2,7 +2,7 @@
 
 Collective squad progress app built on Next.js (App Router), TypeScript, Tailwind CSS and Supabase.
 
-Public read-only squad dashboard at `/`; each member updates their own count through a private link (`/update/<token>`). No login. Architecture, security model, admin commands and migrations are documented in [CLAUDE.md](CLAUDE.md).
+One shared link, no login: the squad dashboard at `/`, the mission view at `/mission`, and `/update` where members pick their name and set their monthly total. Architecture, security model, admin commands and migrations are documented in [CLAUDE.md](CLAUDE.md).
 
 ## Requirements
 
@@ -31,19 +31,19 @@ Open http://localhost:3000.
 | `npm run test`      | Unit tests (Node test runner)                   |
 | `npm run db:test`   | Database/RLS tests (needs `npx supabase start`) |
 | `npm run db:types`  | Regenerate DB types from the linked Supabase project |
-| `npm run links`     | Admin: add members, issue/revoke update links (see CLAUDE.md) |
+| `npm run members`   | Admin: list / add / rename / remove members (see CLAUDE.md) |
 | `npm run check`     | Lint, typecheck, test and build — run before pushing |
 
 ## Project structure
 
 ```
 src/
-  app/(dashboard)/  Public dashboard: page, loading skeleton, error + retry
-  app/update/       Update screen (/update and /update/<token>), Server Actions
+  app/(dashboard)/  Dashboard and Mission screens, loading skeleton, error + retry
+  app/update/       Name picker + update screen, Server Actions
   components/       UI primitives (ui.tsx, icons) and mission/ feature components
   config/           Static app configuration (site name, metadata)
   lib/              mission.ts + progress.ts (pure maths), data loaders, Supabase client, validation
-scripts/            Admin CLI for update links
+scripts/            Admin CLI for members
 supabase/
   migrations/       Version-controlled database schema (source of truth)
   tests/            pgTAP database and RLS tests
@@ -55,6 +55,6 @@ Import from `src/` with the `@/` alias, e.g. `import { siteConfig } from "@/conf
 
 - **Mobile-first:** write base styles for small screens and layer on `sm:`, `md:` and `lg:` overrides.
 - **Server Components by default:** add `"use client"` only where interactivity requires it.
-- **Theme tokens** live in `src/app/globals.css` (`background`, `surface`, `foreground`, `muted`, `accent`, `good`, `warning`, `danger`, …) and follow the system light/dark preference.
+- **Theme tokens** live in `src/app/globals.css` (`background`, `surface`, `foreground`, `muted`, `accent`, `brand-from/to`, `good`, `flame`, `warning`, `danger`, …) and follow the system light/dark preference.
 - **Motion** is subtle and disabled under `prefers-reduced-motion`.
 - **Calculations stay out of JSX:** progress, status and messages come from `src/lib/mission.ts` / `src/lib/progress.ts`.

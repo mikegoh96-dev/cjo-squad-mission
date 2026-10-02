@@ -76,10 +76,18 @@ test("contributions are alphabetical (never ranked by count)", () => {
   );
 });
 
-test("milestones are fractions of the overall target", () => {
+test("milestones belong to the featured month", () => {
+  const p = at("2030-11-15T04:00:00Z"); // November: 2 / 30
+  assert.deepEqual(p.milestones.map((m) => [m.key, m.cases, m.reached]), [
+    ["started", 1, true], ["halfway", 15, false], ["momentum", 23, false], ["cleared", 30, false],
+  ]);
+  assert.equal(p.milestones[3].label, "November cleared");
+});
+
+test("month filtering: each month only sums its own counts", () => {
   const p = at("2030-11-15T04:00:00Z");
-  assert.deepEqual(p.milestones.map((m) => [m.percent, m.cases, m.reached]), [
-    [25, 23, true], [50, 45, false], [75, 68, false], [100, 90, false],
+  assert.deepEqual(p.months.map((m) => [m.label, m.progress.total, m.progress.target]), [
+    ["October", 21, 20], ["November", 2, 30], ["December", 0, 40],
   ]);
 });
 

@@ -1,50 +1,71 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   Design tokens (iOS-inspired). Accent = validated blue; "good" = status green,
-   only ever shown with an icon + label. Edit colours here, nowhere else.
+   Design tokens. Brand = blue -> violet gradient (white text >= 5:1 on both
+   ends); "good" = status green, only ever shown with an icon + label; "flame"
+   = momentum accent, always paired with a label. Edit colours here only.
    --------------------------------------------------------------------------- */
 :root {
-  --background: #f2f2f7; /* grouped page background */
-  --surface: #ffffff; /* cards */
-  --surface-2: #f5f5f8; /* inset areas inside cards */
-  --foreground: #0b0b0f;
-  --muted: #6b6b73; /* secondary text: 5.3:1 on white */
-  --hairline: #e5e5ea;
-  --accent: #2a78d6;
-  --accent-strong: #1c5cab;
-  --accent-track: #dbe8fb; /* lighter step of the accent ramp */
-  --accent-soft: #eaf2fd;
-  --good: #0ca30c;
-  --good-text: #006300;
-  --good-track: #d7f0d7;
-  --good-soft: #e9f7e9;
+  --background: #eef1fb;
+  --glow-1: #dfe6ff; /* page backdrop glows */
+  --glow-2: #ece3ff;
+  --surface: #ffffff;
+  --surface-2: #f3f5fc;
+  --foreground: #12152b;
+  --muted: #5d6178; /* 6.1:1 on white, 5.4:1 on background */
+  --hairline: #e3e7f3;
+  --accent: #3a63e8; /* 5.1:1 on white */
+  --accent-strong: #2f54d6;
+  --accent-track: #dde5fc;
+  --accent-soft: #eef2ff;
+  --brand-from: #3d5fe0;
+  --brand-to: #6a4ae0;
+  --violet: #6a4ae0;
+  --violet-soft: #f1edfd;
+  --good: #16a34a;
+  --good-text: #15803d;
+  --good-track: #d5f2df;
+  --good-soft: #e8f8ee;
+  --flame: #f97316;
+  --flame-text: #c2410c;
+  --flame-soft: #fff1e6;
   --warning-text: #8a5a00;
   --warning-soft: #fff4dc;
   --danger-text: #b42318;
   --danger-soft: #fdecea;
+  --shadow: 0 1px 2px rgba(30, 40, 90, 0.04), 0 12px 32px -14px rgba(40, 60, 140, 0.22);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #000000;
-    --surface: #1c1c1e;
-    --surface-2: #2c2c2e;
-    --foreground: #ffffff;
-    --muted: #a1a1a8;
-    --hairline: #38383a;
-    --accent: #3987e5;
-    --accent-strong: #6da7ec;
-    --accent-track: #10325c;
-    --accent-soft: #0f243f;
-    --good: #0ca30c;
-    --good-text: #3fcf3f;
-    --good-track: #0f3d14;
-    --good-soft: #0d2a10;
+    --background: #0b0d17;
+    --glow-1: #14204a;
+    --glow-2: #221a45;
+    --surface: #171a2b;
+    --surface-2: #20243a;
+    --foreground: #f3f4fa;
+    --muted: #9aa0b8; /* 6.6:1 on surface */
+    --hairline: #2a2f48;
+    --accent: #7d9cff; /* 6.6:1 on surface */
+    --accent-strong: #a3b8ff;
+    --accent-track: #1f2a55;
+    --accent-soft: #1a2142;
+    --brand-from: #3552c9;
+    --brand-to: #5b3fc4;
+    --violet: #a68cff;
+    --violet-soft: #241d45;
+    --good: #22c55e;
+    --good-text: #4ade80;
+    --good-track: #12351f;
+    --good-soft: #10261a;
+    --flame: #fb923c;
+    --flame-text: #fb923c;
+    --flame-soft: #2e1d10;
     --warning-text: #fab219;
     --warning-soft: #33270a;
     --danger-text: #ff8a80;
     --danger-soft: #3a1512;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -14px rgba(0, 0, 0, 0.6);
   }
 }
 
@@ -59,20 +80,41 @@
   --color-accent-strong: var(--accent-strong);
   --color-accent-track: var(--accent-track);
   --color-accent-soft: var(--accent-soft);
+  --color-brand-from: var(--brand-from);
+  --color-brand-to: var(--brand-to);
+  --color-violet: var(--violet);
+  --color-violet-soft: var(--violet-soft);
   --color-good: var(--good);
   --color-good-text: var(--good-text);
   --color-good-track: var(--good-track);
   --color-good-soft: var(--good-soft);
+  --color-flame: var(--flame);
+  --color-flame-text: var(--flame-text);
+  --color-flame-soft: var(--flame-soft);
   --color-warning-text: var(--warning-text);
   --color-warning-soft: var(--warning-soft);
   --color-danger-text: var(--danger-text);
   --color-danger-soft: var(--danger-soft);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-jakarta);
+  --shadow-card: var(--shadow);
 }
 
 body {
   -webkit-tap-highlight-color: transparent;
+  background:
+    radial-gradient(120% 60% at 0% 0%, var(--glow-1), transparent 60%),
+    radial-gradient(100% 50% at 100% 10%, var(--glow-2), transparent 55%),
+    var(--background);
+  background-attachment: fixed;
+}
+
+/* Brand surface: hero cards and the primary action (a utility, so variants
+   such as disabled: can override it). */
+@utility bg-brand {
+  background-color: var(--brand-from);
+  background-image:
+    radial-gradient(90% 120% at 100% 0%, rgba(255, 255, 255, 0.18), transparent 55%),
+    linear-gradient(135deg, var(--brand-from), var(--brand-to));
 }
 
 /* ---------------------------------------------------------------------------
@@ -98,6 +140,14 @@ body {
   0%, 100% { opacity: 0.55; }
   50% { opacity: 1; }
 }
+@keyframes confetti {
+  0% { transform: translate3d(0, -10vh, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate3d(var(--drift, 0px), 105vh, 0) rotate(720deg); opacity: 0.9; }
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-16px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
 @keyframes soft-pulse {
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 45%, transparent); }
   50% { box-shadow: 0 0 0 6px color-mix(in oklab, var(--accent) 0%, transparent); }
@@ -109,11 +159,14 @@ body {
 .animate-draw { stroke-dasharray: 30; stroke-dashoffset: 30; animation: draw 0.4s 0.2s ease-out forwards; }
 .animate-shimmer { animation: shimmer 1.4s ease-in-out infinite; }
 .animate-soft-pulse { animation: soft-pulse 2.4s ease-in-out infinite; }
+.animate-confetti { animation: confetti 2.6s cubic-bezier(0.25, 0.6, 0.4, 1) both; }
+.animate-toast { animation: toast-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-rise, .animate-meter, .animate-pop, .animate-shimmer, .animate-soft-pulse {
+  .animate-rise, .animate-meter, .animate-pop, .animate-shimmer, .animate-soft-pulse, .animate-toast {
     animation: none !important;
   }
   .animate-draw { animation: none !important; stroke-dashoffset: 0; }
+  .animate-confetti { display: none; }
   *, *::before, *::after { transition-duration: 0.01ms !important; }
 }

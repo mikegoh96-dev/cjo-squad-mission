@@ -5,7 +5,7 @@ import type { MonthMission } from "@/lib/progress";
 /** October → November → December as one connected journey. */
 export function MissionJourney({ months }: { months: MonthMission[] }) {
   return (
-    <Card className="animate-rise [animation-delay:80ms]" aria-labelledby="journey-title">
+    <Card className="animate-rise [animation-delay:120ms]" aria-labelledby="journey-title">
       <Eyebrow>
         <span id="journey-title">Mission journey</span>
       </Eyebrow>

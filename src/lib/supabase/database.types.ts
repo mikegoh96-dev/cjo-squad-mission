@@ -155,32 +155,6 @@ export type Database = {
           },
         ]
       }
-      member_update_tokens: {
-        Row: {
-          created_at: string
-          squad_member_id: string
-          token_hash: string
-        }
-        Insert: {
-          created_at?: string
-          squad_member_id: string
-          token_hash: string
-        }
-        Update: {
-          created_at?: string
-          squad_member_id?: string
-          token_hash?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "member_update_tokens_squad_member_id_fkey"
-            columns: ["squad_member_id"]
-            isOneToOne: true
-            referencedRelation: "squad_members"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       members: {
         Row: {
           created_at: string
@@ -312,38 +286,28 @@ export type Database = {
       }
     }
     Functions: {
-      admin_issue_update_token: {
-        Args: { p_squad_member_id: string }
-        Returns: string
-      }
-      admin_revoke_update_token: {
-        Args: { p_squad_member_id: string }
-        Returns: boolean
-      }
-      admin_update_link_status: {
-        Args: never
+      member_recent_updates: {
+        Args: { p_limit?: number; p_squad_member_id: string }
         Returns: {
-          link_issued_at: string
-          member_name: string
-          squad_member_id: string
-          squad_name: string
+          changed_at: string
+          month: string
+          new_count: number
+          old_count: number
         }[]
       }
-      get_update_context: {
-        Args: { p_token: string }
+      squad_momentum: {
+        Args: { p_squad_id: string }
         Returns: {
-          campaign_name: string
-          case_count: number
-          member_name: string
-          month: string
-          squad_name: string
+          last_change_at: string
+          this_week: number
+          today: number
         }[]
       }
       submit_case_count: {
         Args: {
           p_case_count: number
           p_expected_count?: number
-          p_token: string
+          p_squad_member_id: string
         }
         Returns: {
           case_count: number

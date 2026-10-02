@@ -45,3 +45,25 @@ export const RefreshIcon = (p: IconProps) => (
 export const EditIcon = (p: IconProps) => (
   <Svg {...p}><path d="M4 20h4L19 9l-4-4L4 16v4z" /></Svg>
 );
+export const HomeIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M4 10.5L12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5H15v-6H9v6H5.5A1.5 1.5 0 0 1 4 19z" /></Svg>
+);
+export const FlameIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M12 21c-3.9 0-6.5-2.6-6.5-6.1 0-3.4 2.6-5.4 3.6-8.4.4 1.8 1.4 2.9 2.6 3.6.2-2.6 1.3-4.9 3.4-6.6-.3 3.3 3.4 5.8 3.4 11.1 0 3.6-2.6 6.4-6.5 6.4z" /><path d="M12 21c-1.6 0-2.8-1.2-2.8-2.8 0-1.8 1.6-2.6 2.2-4.2 1 1 3.4 2.2 3.4 4.4 0 1.5-1.2 2.6-2.8 2.6z" /></Svg>
+);
+export const TrophyIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H4.5a3 3 0 0 0 3.6 4.2M16 6h3.5a3 3 0 0 1-3.6 4.2M12 13v4m-3.5 3h7m-5.5-3h4" /></Svg>
+);
+export const UsersIcon = (p: IconProps) => (
+  <Svg {...p}><circle cx="9" cy="8.5" r="3.2" /><path d="M3.5 19.5c.6-3 2.8-4.8 5.5-4.8s4.9 1.8 5.5 4.8M15.5 5.6a3 3 0 0 1 0 5.8m2 3.7c1.5.6 2.6 2 3 4.4" /></Svg>
+);
+export const SparkleIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M12 3.5l1.9 5.1 5.1 1.9-5.1 1.9L12 17.5l-1.9-5.1L5 10.5l5.1-1.9zM18.5 16l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z" /></Svg>
+);
+export const ClockIcon = (p: IconProps) => (
+  <Svg {...p}><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></Svg>
+);
+export const SwapIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M7 7h12m0 0l-3.5-3.5M19 7l-3.5 3.5M17 17H5m0 0l3.5-3.5M5 17l3.5 3.5" /></Svg>
+);
+export const ChevronRightIcon = (p: IconProps) => <Svg {...p}><path d="M9 5l7 7-7 7" /></Svg>;
