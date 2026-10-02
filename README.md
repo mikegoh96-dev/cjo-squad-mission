@@ -1,6 +1,8 @@
 # CJO Squad Mission
 
-Project foundation built on Next.js (App Router), TypeScript, Tailwind CSS and ESLint.
+Collective squad progress app built on Next.js (App Router), TypeScript, Tailwind CSS and Supabase.
+
+Backend architecture, environment variables, migrations, auth and the security model are documented in [CLAUDE.md](CLAUDE.md).
 
 ## Requirements
 
@@ -11,6 +13,7 @@ Project foundation built on Next.js (App Router), TypeScript, Tailwind CSS and E
 
 ```bash
 npm ci
+cp .env.example .env.local   # add Supabase URL + publishable key
 npm run dev
 ```
 
@@ -25,7 +28,9 @@ Open http://localhost:3000.
 | `npm run start`     | Serve the production build                      |
 | `npm run lint`      | Run ESLint                                      |
 | `npm run typecheck` | Generate route types and run `tsc --noEmit`     |
-| `npm run check`     | Lint, typecheck and build — run before pushing  |
+| `npm run test`      | Unit tests (Node test runner)                   |
+| `npm run db:test`   | Database/RLS tests (needs `npx supabase start`) |
+| `npm run check`     | Lint, typecheck, test and build — run before pushing |
 
 ## Project structure
 
@@ -33,6 +38,11 @@ Open http://localhost:3000.
 src/
   app/          Routes, layouts and route-level UI (App Router)
   config/       Static app configuration (site name, metadata)
+  lib/          Supabase clients, auth helpers, validation
+  proxy.ts      Refreshes the Supabase session on each request
+supabase/
+  migrations/   Version-controlled database schema (source of truth)
+  tests/        pgTAP database and RLS tests
 ```
 
 As the product grows, add these alongside `app/`:
@@ -41,7 +51,6 @@ As the product grows, add these alongside `app/`:
 src/
   components/   Reusable UI components (ui/ for primitives, feature folders for the rest)
   features/     Feature modules that group components, hooks and logic by domain
-  lib/          Framework-agnostic utilities and service clients
   types/        Shared TypeScript types
 ```
 
