@@ -6,7 +6,7 @@
 -- temp table so the anon role can "hold" them like a bookmarked URL.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(46);
+select plan(53);
 
 delete from public.campaigns;  -- isolate from real campaigns (rolled back)
 insert into public.campaigns (id, slug, name, starts_on, ends_on) values (
@@ -150,6 +150,35 @@ select results_eq(
   $$select total_cases from public.squad_monthly_progress where squad_name = 'Alpha'$$,
   $$values (11)$$, 'Alpha total recalculates (7 + 4)');
 
+-- Conflict-safe saves: status tells the client what happened
+select results_eq(
+  $$select status, case_count, previous_count
+    from public.submit_case_count((select token from links where who = 'mike'), 7)$$,
+  $$values ('unchanged'::text, 7, 7)$$,
+  're-submitting the current value reports unchanged');
+select results_eq(
+  $$select status, case_count from public.submit_case_count((select token from links where who = 'mike'), 9, 5)$$,
+  $$values ('conflict'::text, 7)$$,
+  'a stale expected count reports conflict with the current value');
+select results_eq($$select case_count from counts_now where squad_member_id = '20000000-0000-0000-0000-00000000000a'$$,
+  $$values (7)$$, 'a conflict writes nothing');
+select results_eq(
+  $$select status, case_count, previous_count
+    from public.submit_case_count((select token from links where who = 'mike'), 7, 5)$$,
+  $$values ('unchanged'::text, 7, 7)$$,
+  'a duplicate submit from a stale page that already applied reports unchanged, not conflict');
+select results_eq(
+  $$select status, case_count, previous_count
+    from public.submit_case_count((select token from links where who = 'mike'), 8, 7)$$,
+  $$values ('saved'::text, 8, 7)$$,
+  'a matching expected count saves');
+select results_eq(
+  $$select status, case_count from public.submit_case_count((select token from links where who = 'mike'), 7, 8)$$,
+  $$values ('saved'::text, 7)$$,
+  'members can lower their total (corrections)');
+select throws_ok($$select public.submit_case_count((select token from links where who = 'mike'), 5, -1)$$, '22023', null,
+  'a negative expected count is rejected');
+
 -- Rejected submissions
 select throws_ok($$select public.submit_case_count(encode(gen_random_bytes(32), 'hex'), 5)$$, '28000', null,
   'a guessed token cannot submit');
@@ -176,7 +205,8 @@ select ok(public.admin_revoke_update_token('20000000-0000-0000-0000-00000000000b
 select results_eq(
   $$select old_count, new_count, changed_by from public.case_update_history
     where squad_member_id = '20000000-0000-0000-0000-00000000000a' order by id$$,
-  $$values (0, 6, '00000000-0000-0000-0000-00000000000a'::uuid), (6, 7, '00000000-0000-0000-0000-00000000000a'::uuid)$$,
+  $$values (0, 6, '00000000-0000-0000-0000-00000000000a'::uuid), (6, 7, '00000000-0000-0000-0000-00000000000a'::uuid),
+           (7, 8, '00000000-0000-0000-0000-00000000000a'::uuid), (8, 7, '00000000-0000-0000-0000-00000000000a'::uuid)$$,
   'history records each real change, attributed to the link owner');
 
 set local role anon;

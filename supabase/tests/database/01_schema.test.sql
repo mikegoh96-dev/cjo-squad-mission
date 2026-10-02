@@ -88,7 +88,7 @@ select is(
 -- ---------------------------------------------------------------------------
 select function_privs_are('public', 'get_update_context', array['text'], 'anon', array['EXECUTE'],
   'anon can load an update link');
-select function_privs_are('public', 'submit_case_count', array['text', 'integer'], 'anon', array['EXECUTE'],
+select function_privs_are('public', 'submit_case_count', array['text', 'integer', 'integer'], 'anon', array['EXECUTE'],
   'anon can submit with an update link');
 select function_privs_are('public', 'admin_issue_update_token', array['uuid'], 'anon', array[]::text[],
   'anon cannot issue links');
@@ -104,7 +104,7 @@ select is(
   (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'submit_case_count'),
   1,
-  'submit_case_count has a single signature (token, count): no member id parameter'
+  'submit_case_count has a single signature (token, count, expected): no member id parameter'
 );
 select ok(not has_function_privilege('anon', 'private.member_for_token(text)', 'EXECUTE'),
   'private helpers are not executable by API roles');

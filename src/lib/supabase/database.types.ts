@@ -340,10 +340,16 @@ export type Database = {
         }[]
       }
       submit_case_count: {
-        Args: { p_case_count: number; p_token: string }
+        Args: {
+          p_case_count: number
+          p_expected_count?: number
+          p_token: string
+        }
         Returns: {
           case_count: number
           month: string
+          previous_count: number
+          status: string
         }[]
       }
     }

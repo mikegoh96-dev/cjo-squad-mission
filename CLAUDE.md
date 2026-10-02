@@ -29,6 +29,23 @@ Two experiences, no accounts, no sign-in anywhere:
    member and updates **only that member's** current total for the open
    campaign month. No member id is ever accepted from the client. Invalid,
    unknown and revoked links all 404.
+3. **Remembered device `/update`** — after a successful save from a personal
+   link, the token is stored in an httpOnly cookie (`cjo_update_link`,
+   `src/lib/remembered-link.ts`) so the dashboard's "Update my cases" button
+   opens `/update` directly. Without the cookie the button explains how to use
+   the personal link. "Forget this device" clears it. A revoked link in the
+   cookie stops working like the URL does.
+
+**Saves are conflict-safe.** The update screen sends the count it displayed
+(`p_expected_count`) with the new total. `submit_case_count` locks the
+member's row and returns `saved`, `unchanged` (same value: a double-tap or
+retry never inflates the total) or `conflict` (the stored count changed since
+the page loaded; nothing is written and the UI asks "Keep X / Save Y anyway").
+Members enter their **total** for the month, never an increment.
+
+The `(dashboard)` route group holds `/`'s `loading.tsx` and `error.tsx`
+(retry without reload). Never add a `loading.tsx` that wraps `/update/*`:
+streaming would send status 200 before `notFound()` can return 404.
 
 Tokens: 256-bit random, 64 lowercase hex chars, generated in Postgres. Only
 the SHA-256 hash is stored (`member_update_tokens`, one active link per member).
@@ -41,8 +58,13 @@ noindex` and `Cache-Control: no-store`.
 | `src/lib/supabase/env.ts` | Reads and validates env vars |
 | `src/lib/supabase/database.types.ts` | **Generated** DB types (`npm run db:types`); never edit by hand |
 | `src/lib/data/dashboard.ts` | Public dashboard data (V1: the single/oldest squad, current campaign) |
-| `src/lib/data/update-link.ts` | `getUpdateContext` / `submitCaseCount` via the token RPCs |
-| `src/app/update/[token]/` | Update page, form and `saveCaseCount` Server Action |
+| `src/lib/mission.ts` | Pure mission maths: progress %, remaining, status, messages (unit-tested) |
+| `src/lib/progress.ts` | Campaign/month phases, focus month, milestones, contributions (unit-tested) |
+| `src/lib/data/update-link.ts` | `getUpdateContext` / `submitCaseCount` / `getSquadMonth` via the token RPCs and view |
+| `src/lib/remembered-link.ts` | Remembered-device cookie (server-only) |
+| `src/app/(dashboard)/` | Public dashboard page, loading skeleton, error state |
+| `src/app/update/` | `/update` (cookie) and `/update/[token]` pages, `update-screen.tsx`, `actions.ts` (`saveCaseCount`, `forgetDevice`) |
+| `src/components/` | `ui.tsx` (Card, Meter), icons, `mission/*` dashboard sections |
 | `scripts/update-links.mjs` | Admin CLI: add members, issue/regenerate/revoke links |
 
 The app never uses a service-role/secret key; all browser-facing code paths
@@ -85,7 +107,7 @@ Copy `.env.example` to `.env.local` (git-ignored).
 - Apply to the hosted project: `npx supabase login`, `npx supabase link
   --project-ref <ref>`, then `npx supabase db push`.
 - Hosted project `tdmpukylkqgibfddedxi` (ap-southeast-1, Postgres 17): all
-  three migrations applied and recorded in `supabase_migrations.schema_migrations`.
+  four migrations applied and recorded in `supabase_migrations.schema_migrations`.
 - Tests: `supabase/tests/database/*.test.sql` (pgTAP), run with
   `npm run db:test` (needs `npx supabase start`, Docker).
 - After any migration, regenerate types (`npm run db:types`) and commit them.
@@ -106,7 +128,7 @@ The open month is resolved in the campaign's `time_zone`.
 
 | Role | Can | Cannot |
 | --- | --- | --- |
-| anon / authenticated | SELECT members, squads, squad_members, campaigns, monthly_targets, member_case_counts, squad_monthly_progress; call `get_update_context(token)` and `submit_case_count(token, count)` | INSERT/UPDATE/DELETE any table; read `case_update_history` or `member_update_tokens`; call `admin_*` functions |
+| anon / authenticated | SELECT members, squads, squad_members, campaigns, monthly_targets, member_case_counts, squad_monthly_progress; call `get_update_context(token)` and `submit_case_count(token, count, expected_count)` | INSERT/UPDATE/DELETE any table; read `case_update_history` or `member_update_tokens`; call `admin_*` functions |
 | service_role (admin CLI) | `admin_issue_update_token`, `admin_revoke_update_token`, `admin_update_link_status`; manage squads/members | read token hashes directly |
 
 The token functions are `security definer` with `search_path = ''`; private

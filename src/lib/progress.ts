@@ -1,5 +1,14 @@
-// Pure squad-progress calculations. Every number is derived from campaign
-// data and member counts; nothing about specific campaigns is hard-coded.
+// Squad progress for one campaign: pure, built on the mission maths. Every
+// number is derived from campaign data and member counts; nothing about
+// specific campaigns, months or years is hard-coded.
+import {
+  type MissionProgress,
+  type MissionStatus,
+  type MonthPhase,
+  daysInMonth,
+  missionProgress,
+  missionStatus,
+} from "./mission.ts";
 
 export type Campaign = {
   id: string;
@@ -12,17 +21,14 @@ export type MonthlyTarget = { month: string; targetCases: number }; // month = Y
 export type Member = { squadMemberId: string; displayName: string };
 export type MemberCount = { squadMemberId: string; month: string; caseCount: number };
 
-export type MonthStatus = "past" | "current" | "upcoming";
+export type CampaignPhase = "before" | "active" | "finished";
 
-export type MonthProgress = {
+export type MonthMission = {
   month: string;
   label: string;
-  target: number;
-  total: number;
-  percent: number;
-  remaining: number;
-  achieved: boolean;
-  status: MonthStatus;
+  phase: MonthPhase;
+  progress: MissionProgress;
+  status: MissionStatus;
 };
 
 export type Milestone = { percent: number; cases: number; reached: boolean };
@@ -30,29 +36,22 @@ export type Milestone = { percent: number; cases: number; reached: boolean };
 export type Contribution = {
   squadMemberId: string;
   displayName: string;
-  total: number;
-  byMonth: Record<string, number>;
+  /** Cases in the featured month. */
+  monthCases: number;
+  /** Cases across the whole campaign. */
+  campaignCases: number;
 };
 
 export type SquadProgress = {
-  totalCases: number;
-  overallTarget: number;
-  percent: number;
-  remaining: number;
-  months: MonthProgress[];
-  currentMonth: MonthProgress | null;
-  contributions: Contribution[];
+  phase: CampaignPhase;
+  months: MonthMission[];
+  /** The month the dashboard features: current, else next upcoming, else last. */
+  focus: MonthMission;
+  dayOfMonth: number;
+  overall: MissionProgress;
   milestones: Milestone[];
-  stage: ProgressStage;
+  contributions: Contribution[];
 };
-
-export type ProgressStage =
-  | "launch"
-  | "building"
-  | "halfway"
-  | "closing-in"
-  | "final-push"
-  | "accomplished";
 
 /** Milestones as fractions of the overall target (product config, not data). */
 export const MILESTONE_PERCENTS = [25, 50, 75, 100] as const;
@@ -67,11 +66,8 @@ export function todayIn(timeZone: string, now: Date = new Date()): string {
   }).format(now);
 }
 
-/** Campaign covering `today`, else the next upcoming one, else the latest. */
-export function pickCurrentCampaign(
-  campaigns: Campaign[],
-  now: Date = new Date(),
-): Campaign | null {
+/** Campaign covering today, else the next upcoming one, else the latest. */
+export function pickCurrentCampaign(campaigns: Campaign[], now: Date = new Date()): Campaign | null {
   const withToday = campaigns.map((c) => ({ c, today: todayIn(c.timeZone, now) }));
   const active = withToday
     .filter(({ c, today }) => c.startsOn <= today && today <= c.endsOn)
@@ -91,20 +87,6 @@ export function monthLabel(month: string): string {
   );
 }
 
-export function percentOf(part: number, whole: number): number {
-  if (whole <= 0) return 0;
-  return Math.round((part / whole) * 1000) / 10; // one decimal place
-}
-
-export function stageFor(percent: number): ProgressStage {
-  if (percent >= 100) return "accomplished";
-  if (percent >= 75) return "final-push";
-  if (percent >= 50) return "closing-in";
-  if (percent >= 25) return "halfway";
-  if (percent > 0) return "building";
-  return "launch";
-}
-
 export function computeSquadProgress(input: {
   campaign: Campaign;
   targets: MonthlyTarget[];
@@ -112,64 +94,64 @@ export function computeSquadProgress(input: {
   counts: MemberCount[];
   now?: Date;
 }): SquadProgress {
-  const { campaign, members, counts } = input;
+  const { campaign, members } = input;
   const targets = [...input.targets].sort((a, b) => a.month.localeCompare(b.month));
-  const currentMonthKey = `${todayIn(campaign.timeZone, input.now).slice(0, 7)}-01`;
-  const memberIds = new Set(members.map((m) => m.squadMemberId));
-  const relevant = counts.filter((c) => memberIds.has(c.squadMemberId));
+  if (targets.length === 0) throw new Error("campaign has no monthly targets");
 
-  const months: MonthProgress[] = targets.map((t) => {
-    const total = relevant
-      .filter((c) => c.month === t.month)
-      .reduce((sum, c) => sum + c.caseCount, 0);
-    const status: MonthStatus =
-      t.month === currentMonthKey ? "current" : t.month < currentMonthKey ? "past" : "upcoming";
+  const today = todayIn(campaign.timeZone, input.now);
+  const todayMonth = `${today.slice(0, 7)}-01`;
+  const dayOfMonth = Number(today.slice(8, 10));
+  const phase: CampaignPhase =
+    today < campaign.startsOn ? "before" : today > campaign.endsOn ? "finished" : "active";
+
+  const memberIds = new Set(members.map((m) => m.squadMemberId));
+  const counts = input.counts.filter((c) => memberIds.has(c.squadMemberId));
+  const sum = (filter: (c: MemberCount) => boolean) =>
+    counts.filter(filter).reduce((total, c) => total + c.caseCount, 0);
+
+  const months: MonthMission[] = targets.map((t) => {
+    const monthPhase: MonthPhase =
+      t.month === todayMonth ? "current" : t.month < todayMonth ? "past" : "upcoming";
+    const progress = missionProgress(sum((c) => c.month === t.month), t.targetCases);
     return {
       month: t.month,
       label: monthLabel(t.month),
-      target: t.targetCases,
-      total,
-      percent: percentOf(total, t.targetCases),
-      remaining: Math.max(t.targetCases - total, 0),
-      achieved: total >= t.targetCases,
-      status,
+      phase: monthPhase,
+      progress,
+      status: missionStatus({
+        progress,
+        phase: monthPhase,
+        dayOfMonth,
+        daysInMonth: daysInMonth(t.month),
+      }),
     };
   });
 
-  const overallTarget = months.reduce((sum, m) => sum + m.target, 0);
-  const totalCases = months.reduce((sum, m) => sum + m.total, 0);
-  const percent = percentOf(totalCases, overallTarget);
+  const focus =
+    months.find((m) => m.phase === "current") ??
+    months.find((m) => m.phase === "upcoming") ??
+    months[months.length - 1];
 
-  const contributions: Contribution[] = members
-    .map((m) => {
-      const byMonth = Object.fromEntries(
-        targets.map((t) => [
-          t.month,
-          relevant
-            .filter((c) => c.squadMemberId === m.squadMemberId && c.month === t.month)
-            .reduce((sum, c) => sum + c.caseCount, 0),
-        ]),
-      );
-      const total = Object.values(byMonth).reduce((sum, n) => sum + n, 0);
-      return { squadMemberId: m.squadMemberId, displayName: m.displayName, total, byMonth };
-    })
+  const overall = missionProgress(
+    months.reduce((total, m) => total + m.progress.total, 0),
+    months.reduce((total, m) => total + m.progress.target, 0),
+  );
+
+  const milestones = MILESTONE_PERCENTS.map((p) => {
+    const cases = Math.ceil((overall.target * p) / 100);
+    return { percent: p, cases, reached: overall.total >= cases };
+  });
+
+  const campaignMonths = new Set(targets.map((t) => t.month));
+  const contributions = members
+    .map((m) => ({
+      squadMemberId: m.squadMemberId,
+      displayName: m.displayName,
+      monthCases: sum((c) => c.squadMemberId === m.squadMemberId && c.month === focus.month),
+      campaignCases: sum((c) => c.squadMemberId === m.squadMemberId && campaignMonths.has(c.month)),
+    }))
     // Alphabetical, never by count: contributions are recognition, not a ranking.
     .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
-  const milestones = MILESTONE_PERCENTS.map((p) => {
-    const cases = Math.ceil((overallTarget * p) / 100);
-    return { percent: p, cases, reached: overallTarget > 0 && totalCases >= cases };
-  });
-
-  return {
-    totalCases,
-    overallTarget,
-    percent,
-    remaining: Math.max(overallTarget - totalCases, 0),
-    months,
-    currentMonth: months.find((m) => m.status === "current") ?? null,
-    contributions,
-    milestones,
-    stage: stageFor(percent),
-  };
+  return { phase, months, focus, dayOfMonth, overall, milestones, contributions };
 }

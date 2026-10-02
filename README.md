@@ -38,22 +38,15 @@ Open http://localhost:3000.
 
 ```
 src/
-  app/          Routes, layouts and route-level UI (App Router)
-  config/       Static app configuration (site name, metadata)
-  lib/          Supabase client, data loaders, progress maths, validation
-scripts/        Admin CLI for update links
+  app/(dashboard)/  Public dashboard: page, loading skeleton, error + retry
+  app/update/       Update screen (/update and /update/<token>), Server Actions
+  components/       UI primitives (ui.tsx, icons) and mission/ feature components
+  config/           Static app configuration (site name, metadata)
+  lib/              mission.ts + progress.ts (pure maths), data loaders, Supabase client, validation
+scripts/            Admin CLI for update links
 supabase/
-  migrations/   Version-controlled database schema (source of truth)
-  tests/        pgTAP database and RLS tests
-```
-
-As the product grows, add these alongside `app/`:
-
-```
-src/
-  components/   Reusable UI components (ui/ for primitives, feature folders for the rest)
-  features/     Feature modules that group components, hooks and logic by domain
-  types/        Shared TypeScript types
+  migrations/       Version-controlled database schema (source of truth)
+  tests/            pgTAP database and RLS tests
 ```
 
 Import from `src/` with the `@/` alias, e.g. `import { siteConfig } from "@/config/site"`.
@@ -62,4 +55,6 @@ Import from `src/` with the `@/` alias, e.g. `import { siteConfig } from "@/conf
 
 - **Mobile-first:** write base styles for small screens and layer on `sm:`, `md:` and `lg:` overrides.
 - **Server Components by default:** add `"use client"` only where interactivity requires it.
-- **Theme tokens** live in `src/app/globals.css` (`background`, `foreground`, `muted`) and follow the system light/dark preference.
+- **Theme tokens** live in `src/app/globals.css` (`background`, `surface`, `foreground`, `muted`, `accent`, `good`, `warning`, `danger`, …) and follow the system light/dark preference.
+- **Motion** is subtle and disabled under `prefers-reduced-motion`.
+- **Calculations stay out of JSX:** progress, status and messages come from `src/lib/mission.ts` / `src/lib/progress.ts`.
