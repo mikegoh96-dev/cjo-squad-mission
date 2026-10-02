@@ -30,6 +30,7 @@ Open http://localhost:3000.
 | `npm run typecheck` | Generate route types and run `tsc --noEmit`     |
 | `npm run test`      | Unit tests (Node test runner)                   |
 | `npm run db:test`   | Database/RLS tests (needs `npx supabase start`) |
+| `npm run db:types`  | Regenerate DB types from the linked Supabase project |
 | `npm run check`     | Lint, typecheck, test and build — run before pushing |
 
 ## Project structure

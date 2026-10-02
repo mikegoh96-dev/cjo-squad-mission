@@ -23,9 +23,14 @@ Next.js 16 (App Router, `src/`), TypeScript, Tailwind CSS v4, Supabase
 | `src/lib/supabase/client.ts` | Client Components |
 | `src/lib/supabase/proxy.ts` + `src/proxy.ts` | Refreshes the auth session cookie on each request (Next 16 `proxy`, formerly middleware) |
 | `src/lib/supabase/env.ts` | Reads and validates env vars; throws a clear error if missing |
+| `src/lib/supabase/database.types.ts` | **Generated** DB types (`npm run db:types`); never edit by hand |
+| `src/lib/auth/dal.ts` | `verifySession()`: the authoritative auth check for pages/actions |
+| `src/lib/auth/routes.ts` | Login path, signed-in home, protected path prefixes |
+| `src/lib/auth/actions.ts` | `signInWithEmail` (magic link) and `signOut` Server Actions |
+| `src/lib/data/current-member.ts` | Signed-in user's profile + squad (RLS-scoped) |
 | `src/app/auth/confirm/route.ts` | Completes email links (PKCE `code` or `token_hash`); `next` is restricted to same-origin paths |
 
-All clients use the **publishable key** and run as the signed-in user, so RLS
+All clients are typed with `Database` and use the **publishable key** and run as the signed-in user, so RLS
 applies. No service-role/secret key is used by the app. If one is ever needed,
 keep it server-only (never `NEXT_PUBLIC_`) and never use it for user requests.
 Create a new server client per request.
@@ -67,12 +72,47 @@ first with `parseCaseCount` (`src/lib/validation/case-count.ts`).
 Campaign targets are data (`monthly_targets`, seeded by migration: Oct 2026 =
 20, Nov = 30, Dec = 40). Never hard-code targets in application code.
 
+After any migration, regenerate types (`npm run db:types`, needs `supabase
+link`) and commit `database.types.ts`.
+
 ## Authentication
 
-Supabase Auth with cookie sessions via `@supabase/ssr`. Check the user on the
-server with `supabase.auth.getClaims()` (verifies the JWT); never trust
-`getSession()` on the server. The sign-in method/UI is not built yet; email
-links should redirect to `/auth/confirm`.
+Supabase Auth email magic links (passwordless; the link also confirms the
+address), cookie sessions via `@supabase/ssr`, PKCE flow.
+
+1. `/login` → `signInWithEmail` → `signInWithOtp` with
+   `emailRedirectTo = <origin>/auth/confirm?next=<path>`.
+2. The emailed link returns to `/auth/confirm`, which exchanges the code for a
+   session and redirects to `next` (default `/squad`). Failures → `/auth/error`.
+   Links must be opened in the browser that requested them (PKCE).
+3. `/squad` is the signed-in home (the dashboard will live here). Users not
+   yet in a squad see a waiting state.
+4. Sign out: the `signOut` action clears the session and returns to `/login`.
+
+On the server always use `supabase.auth.getClaims()` (verifies the JWT);
+never trust `getSession()` on the server.
+
+### Route protection (three layers)
+
+1. **Proxy** (`src/lib/supabase/proxy.ts`): signed-out requests to protected
+   prefixes (`PROTECTED_PREFIXES` in `routes.ts`, currently `/squad`) redirect
+   to `/login?next=…`; signed-in users on `/login` go to `/squad`. Fails closed
+   if Supabase env is missing. Optimistic only.
+2. **DAL**: every protected page, Server Action and Route Handler must call
+   `verifySession()` (or `getCurrentMember()`), which redirects if signed out.
+3. **RLS**: the database only returns the caller's own squad.
+
+New protected areas: add the prefix to `PROTECTED_PREFIXES` **and** call the
+DAL in the page.
+
+### Hosted Auth settings (Supabase dashboard → Authentication)
+
+- URL Configuration → Site URL: the production URL (e.g. the Vercel domain).
+- Redirect URLs: `http://localhost:3000/**`, `<production URL>/**`, and for
+  Vercel previews `https://*-<vercel-team-slug>.vercel.app/**`.
+- Sign-ups: leave email sign-ups on for self-registration (new users wait for
+  an admin to add them to a squad), or turn them off for invite-only.
+- `supabase/config.toml` holds the equivalent **local** settings only.
 
 ## Authorization model (RLS)
 

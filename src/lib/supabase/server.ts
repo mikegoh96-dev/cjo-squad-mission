@@ -1,6 +1,7 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import type { Database } from "./database.types";
 import { getSupabaseEnv } from "./env";
 
 /**
@@ -10,10 +11,12 @@ import { getSupabaseEnv } from "./env";
  * Create a new client per request; never store it in a module-level variable.
  */
 export async function createClient() {
-  const { url, publishableKey } = getSupabaseEnv();
+  // Read cookies first: it marks the route as dynamic even if env is missing,
+  // so Next.js never tries to prerender user-specific pages at build time.
   const cookieStore = await cookies();
+  const { url, publishableKey } = getSupabaseEnv();
 
-  return createServerClient(url, publishableKey, {
+  return createServerClient<Database>(url, publishableKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll();
