@@ -2,7 +2,7 @@
 
 Collective squad progress app built on Next.js (App Router), TypeScript, Tailwind CSS and Supabase.
 
-Backend architecture, environment variables, migrations, auth and the security model are documented in [CLAUDE.md](CLAUDE.md).
+Public read-only squad dashboard at `/`; each member updates their own count through a private link (`/update/<token>`). No login. Architecture, security model, admin commands and migrations are documented in [CLAUDE.md](CLAUDE.md).
 
 ## Requirements
 
@@ -31,6 +31,7 @@ Open http://localhost:3000.
 | `npm run test`      | Unit tests (Node test runner)                   |
 | `npm run db:test`   | Database/RLS tests (needs `npx supabase start`) |
 | `npm run db:types`  | Regenerate DB types from the linked Supabase project |
+| `npm run links`     | Admin: add members, issue/revoke update links (see CLAUDE.md) |
 | `npm run check`     | Lint, typecheck, test and build — run before pushing |
 
 ## Project structure
@@ -39,8 +40,8 @@ Open http://localhost:3000.
 src/
   app/          Routes, layouts and route-level UI (App Router)
   config/       Static app configuration (site name, metadata)
-  lib/          Supabase clients, auth helpers, validation
-  proxy.ts      Refreshes the Supabase session on each request
+  lib/          Supabase client, data loaders, progress maths, validation
+scripts/        Admin CLI for update links
 supabase/
   migrations/   Version-controlled database schema (source of truth)
   tests/        pgTAP database and RLS tests

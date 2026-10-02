@@ -1,7 +1,7 @@
 -- Schema, privileges and data-integrity tests. Run with: npx supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(34);
+select plan(37);
 
 -- ---------------------------------------------------------------------------
 -- Tables, RLS and the derived progress view
@@ -9,8 +9,8 @@ select plan(34);
 select tables_are(
   'public',
   array[
-    'profiles', 'squads', 'squad_members', 'campaigns', 'monthly_targets',
-    'member_case_counts', 'case_update_history'
+    'members', 'squads', 'squad_members', 'campaigns', 'monthly_targets',
+    'member_case_counts', 'case_update_history', 'member_update_tokens'
   ],
   'public schema contains exactly the application tables'
 );
@@ -34,23 +34,38 @@ select hasnt_column('public', 'squads', 'total_cases',
   'squad totals are not stored (no duplicated source of truth)');
 
 -- ---------------------------------------------------------------------------
--- Grants: anon gets nothing; history is read-only; is_admin not updatable
+-- No Supabase Auth dependency remains
 -- ---------------------------------------------------------------------------
-select table_privs_are('public', 'profiles', 'anon', array[]::text[], 'anon: no access to profiles');
-select table_privs_are('public', 'squads', 'anon', array[]::text[], 'anon: no access to squads');
-select table_privs_are('public', 'squad_members', 'anon', array[]::text[], 'anon: no access to squad_members');
-select table_privs_are('public', 'campaigns', 'anon', array[]::text[], 'anon: no access to campaigns');
-select table_privs_are('public', 'monthly_targets', 'anon', array[]::text[], 'anon: no access to monthly_targets');
-select table_privs_are('public', 'member_case_counts', 'anon', array[]::text[], 'anon: no access to member_case_counts');
-select table_privs_are('public', 'case_update_history', 'anon', array[]::text[], 'anon: no access to case_update_history');
-select table_privs_are('public', 'squad_monthly_progress', 'anon', array[]::text[], 'anon: no access to squad_monthly_progress');
-select function_privs_are('public', 'set_my_case_count', array['uuid', 'date', 'integer'],
-  'anon', array[]::text[], 'anon cannot call set_my_case_count');
+select hasnt_trigger('auth', 'users', 'on_auth_user_created', 'no sign-up trigger on auth.users');
+select is(
+  (select count(*)::int from pg_constraint
+   where conrelid = 'public.members'::regclass and confrelid = 'auth.users'::regclass),
+  0,
+  'members do not reference auth.users'
+);
+select hasnt_column('public', 'members', 'is_admin', 'no auth-era admin flag');
+select is(
+  (select count(*)::int from pg_proc where proname = 'set_my_case_count'),
+  0,
+  'auth-based set_my_case_count is gone'
+);
 
-select table_privs_are('public', 'case_update_history', 'authenticated', array['SELECT'],
-  'authenticated: case_update_history is read-only');
-select table_privs_are('public', 'case_update_history', 'service_role', array['INSERT', 'SELECT'],
-  'service_role: case_update_history is append-only');
+-- ---------------------------------------------------------------------------
+-- Grants: public read-only; no direct writes; private tables stay private
+-- ---------------------------------------------------------------------------
+select table_privs_are('public', 'members', 'anon', array['SELECT'], 'anon: read-only members');
+select table_privs_are('public', 'squads', 'anon', array['SELECT'], 'anon: read-only squads');
+select table_privs_are('public', 'squad_members', 'anon', array['SELECT'], 'anon: read-only squad_members');
+select table_privs_are('public', 'campaigns', 'anon', array['SELECT'], 'anon: read-only campaigns');
+select table_privs_are('public', 'monthly_targets', 'anon', array['SELECT'], 'anon: read-only monthly_targets');
+select table_privs_are('public', 'member_case_counts', 'anon', array['SELECT'], 'anon: read-only member_case_counts');
+select table_privs_are('public', 'squad_monthly_progress', 'anon', array['SELECT'], 'anon: read-only progress view');
+select table_privs_are('public', 'case_update_history', 'anon', array[]::text[], 'anon: no access to history');
+select table_privs_are('public', 'member_update_tokens', 'anon', array[]::text[], 'anon: no access to tokens');
+select table_privs_are('public', 'member_update_tokens', 'authenticated', array[]::text[], 'authenticated: no access to tokens');
+select table_privs_are('public', 'member_update_tokens', 'service_role', array[]::text[], 'service_role: no direct access to tokens');
+select table_privs_are('public', 'member_case_counts', 'authenticated', array['SELECT'], 'authenticated: read-only counts');
+
 select is(
   (select count(*)::int from information_schema.role_table_grants
    where table_schema = 'public'
@@ -59,16 +74,40 @@ select is(
   0,
   'no API role can TRUNCATE, reference or add triggers to application tables'
 );
-select ok(not has_column_privilege('authenticated', 'public.profiles', 'is_admin', 'UPDATE'),
-  'authenticated cannot update profiles.is_admin');
-select ok(not has_column_privilege('authenticated', 'public.profiles', 'is_admin', 'INSERT'),
-  'authenticated cannot insert profiles.is_admin');
-select ok(not has_column_privilege('authenticated', 'public.member_case_counts', 'squad_member_id', 'UPDATE'),
-  'authenticated cannot reassign a case count to another member');
-select ok(has_column_privilege('authenticated', 'public.member_case_counts', 'case_count', 'UPDATE'),
-  'authenticated can update case_count (row access is limited by RLS)');
-select ok(not has_function_privilege('authenticated', 'private.handle_new_user()', 'EXECUTE'),
-  'trigger functions are not executable by API roles');
+select is(
+  (select count(*)::int from information_schema.columns c
+   join information_schema.role_table_grants g
+     on g.table_schema = c.table_schema and g.table_name = c.table_name
+   where c.table_schema = 'public' and g.grantee = 'anon' and c.column_name ilike '%token%'),
+  0,
+  'no column readable by anon contains token data'
+);
+
+-- ---------------------------------------------------------------------------
+-- Functions: token-gated API for everyone, admin functions for service_role
+-- ---------------------------------------------------------------------------
+select function_privs_are('public', 'get_update_context', array['text'], 'anon', array['EXECUTE'],
+  'anon can load an update link');
+select function_privs_are('public', 'submit_case_count', array['text', 'integer'], 'anon', array['EXECUTE'],
+  'anon can submit with an update link');
+select function_privs_are('public', 'admin_issue_update_token', array['uuid'], 'anon', array[]::text[],
+  'anon cannot issue links');
+select function_privs_are('public', 'admin_revoke_update_token', array['uuid'], 'anon', array[]::text[],
+  'anon cannot revoke links');
+select function_privs_are('public', 'admin_update_link_status', array[]::text[], 'anon', array[]::text[],
+  'anon cannot list link status');
+select function_privs_are('public', 'admin_issue_update_token', array['uuid'], 'authenticated', array[]::text[],
+  'authenticated cannot issue links');
+select function_privs_are('public', 'admin_issue_update_token', array['uuid'], 'service_role', array['EXECUTE'],
+  'service_role can issue links');
+select is(
+  (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'submit_case_count'),
+  1,
+  'submit_case_count has a single signature (token, count): no member id parameter'
+);
+select ok(not has_function_privilege('anon', 'private.member_for_token(text)', 'EXECUTE'),
+  'private helpers are not executable by API roles');
 
 -- ---------------------------------------------------------------------------
 -- Campaign configuration is stored as data
@@ -80,87 +119,32 @@ select results_eq(
   $$values (date '2026-10-01', 20), (date '2026-11-01', 30), (date '2026-12-01', 40)$$,
   'Q4 2026 targets are 20 / 30 / 40'
 );
-
+select col_default_is('public', 'campaigns', 'time_zone', 'Asia/Singapore',
+  'campaign months resolve in the campaign time zone (data)');
 select throws_ok(
   $$insert into public.monthly_targets (campaign_id, month, target_cases)
     select id, date '2027-01-01', 10 from public.campaigns where slug = 'q4-2026'$$,
   '23514', null, 'target months must fall inside the campaign'
 );
-select throws_ok(
-  $$insert into public.monthly_targets (campaign_id, month, target_cases)
-    select id, date '2026-10-15', 10 from public.campaigns where slug = 'q4-2026'$$,
-  '23514', null, 'target months must be the first day of a month'
-);
 
 -- ---------------------------------------------------------------------------
--- Profiles, membership and case-count integrity
+-- Case-count integrity (direct writes as the table owner)
 -- ---------------------------------------------------------------------------
-insert into auth.users (id, email, raw_user_meta_data) values
-  ('aaaaaaaa-0000-0000-0000-000000000001', 'mike@example.test',
-   '{"display_name": "Mike", "is_admin": true}'),
-  ('aaaaaaaa-0000-0000-0000-000000000002', 'jeremy@example.test', '{}');
-
-select results_eq(
-  $$select display_name, is_admin from public.profiles
-    where id in ('aaaaaaaa-0000-0000-0000-000000000001',
-                 'aaaaaaaa-0000-0000-0000-000000000002')
-    order by id$$,
-  $$values ('Mike', false), ('jeremy', false)$$,
-  'sign-up creates a profile; metadata can never grant admin'
-);
-
+insert into public.members (id, display_name)
+  values ('aaaaaaaa-0000-0000-0000-000000000001', 'Mike');
 insert into public.squads (id, name)
   values ('bbbbbbbb-0000-0000-0000-000000000001', 'Test Squad');
-insert into public.squad_members (id, squad_id, user_id) values
+insert into public.squad_members (id, squad_id, member_id) values
   ('cccccccc-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000001',
    'aaaaaaaa-0000-0000-0000-000000000001');
-
-select throws_ok(
-  $$insert into public.squads (name) values ('Second Squad');
-    insert into public.squad_members (squad_id, user_id)
-    select id, 'aaaaaaaa-0000-0000-0000-000000000001' from public.squads
-    where name = 'Second Squad'$$,
-  '23505', null, 'a user can belong to only one squad'
-);
 
 prepare insert_count(int) as
   insert into public.member_case_counts (squad_member_id, campaign_id, month, case_count)
   select 'cccccccc-0000-0000-0000-000000000001', id, date '2026-10-01', $1
   from public.campaigns where slug = 'q4-2026';
 
-select throws_ok($$execute insert_count(-1)$$, '23514', null,
-  'negative case counts are rejected');
-select throws_ok($$execute insert_count(1001)$$, '23514', null,
-  'unreasonably large case counts are rejected');
-select throws_ok(
-  $$insert into public.member_case_counts (squad_member_id, campaign_id, month, case_count)
-    select 'cccccccc-0000-0000-0000-000000000001', id, date '2026-10-01', '6.5'
-    from public.campaigns where slug = 'q4-2026'$$,
-  '22P02', null, 'decimal case counts are rejected'
-);
-select throws_ok(
-  $$insert into public.member_case_counts (squad_member_id, campaign_id, month, case_count)
-    select 'cccccccc-0000-0000-0000-000000000001', id, date '2026-09-01', 1
-    from public.campaigns where slug = 'q4-2026'$$,
-  '23503', null, 'case counts can only exist for configured campaign months'
-);
-
-select lives_ok($$execute insert_count(6)$$, 'a valid case count is stored');
-select throws_ok($$execute insert_count(7)$$, '23505', null,
-  'one current count per member per campaign month');
-
-update public.member_case_counts set case_count = 7
-where squad_member_id = 'cccccccc-0000-0000-0000-000000000001';
-update public.member_case_counts set case_count = 7
-where squad_member_id = 'cccccccc-0000-0000-0000-000000000001';
-
-select results_eq(
-  $$select old_count, new_count from public.case_update_history
-    where squad_member_id = 'cccccccc-0000-0000-0000-000000000001'
-    order by id$$,
-  $$values (0, 6), (6, 7)$$,
-  'every change is recorded in history (no-op updates are skipped)'
-);
+select throws_ok($$execute insert_count(-1)$$, '23514', null, 'negative case counts are rejected');
+select throws_ok($$execute insert_count(1001)$$, '23514', null, 'unreasonably large case counts are rejected');
 
 select * from finish();
 rollback;

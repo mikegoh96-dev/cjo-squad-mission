@@ -14,7 +14,19 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   typedRoutes: true,
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // Private update links: the URL is the credential, so never leak it via
+      // Referer, never index it and never cache the page.
+      {
+        source: "/update/:path*",
+        headers: [
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+          { key: "Cache-Control", value: "private, no-store" },
+        ],
+      },
+    ];
   },
 };
 

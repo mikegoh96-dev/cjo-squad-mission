@@ -22,6 +22,7 @@ export type Database = {
           name: string
           slug: string
           starts_on: string
+          time_zone: string
         }
         Insert: {
           created_at?: string
@@ -30,6 +31,7 @@ export type Database = {
           name: string
           slug: string
           starts_on: string
+          time_zone?: string
         }
         Update: {
           created_at?: string
@@ -38,6 +40,7 @@ export type Database = {
           name?: string
           slug?: string
           starts_on?: string
+          time_zone?: string
         }
         Relationships: []
       }
@@ -77,7 +80,7 @@ export type Database = {
             foreignKeyName: "case_update_history_changed_by_fkey"
             columns: ["changed_by"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "members"
             referencedColumns: ["id"]
           },
           {
@@ -152,6 +155,53 @@ export type Database = {
           },
         ]
       }
+      member_update_tokens: {
+        Row: {
+          created_at: string
+          squad_member_id: string
+          token_hash: string
+        }
+        Insert: {
+          created_at?: string
+          squad_member_id: string
+          token_hash: string
+        }
+        Update: {
+          created_at?: string
+          squad_member_id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_update_tokens_squad_member_id_fkey"
+            columns: ["squad_member_id"]
+            isOneToOne: true
+            referencedRelation: "squad_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      members: {
+        Row: {
+          created_at: string
+          display_name: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       monthly_targets: {
         Row: {
           campaign_id: string
@@ -178,50 +228,33 @@ export type Database = {
           },
         ]
       }
-      profiles: {
-        Row: {
-          created_at: string
-          display_name: string
-          id: string
-          is_admin: boolean
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          display_name: string
-          id: string
-          is_admin?: boolean
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          display_name?: string
-          id?: string
-          is_admin?: boolean
-          updated_at?: string
-        }
-        Relationships: []
-      }
       squad_members: {
         Row: {
           id: string
           joined_at: string
+          member_id: string
           squad_id: string
-          user_id: string
         }
         Insert: {
           id?: string
           joined_at?: string
+          member_id: string
           squad_id: string
-          user_id: string
         }
         Update: {
           id?: string
           joined_at?: string
+          member_id?: string
           squad_id?: string
-          user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "squad_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: true
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "squad_members_squad_id_fkey"
             columns: ["squad_id"]
@@ -234,13 +267,6 @@ export type Database = {
             columns: ["squad_id"]
             isOneToOne: false
             referencedRelation: "squads"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "squad_members_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -286,22 +312,39 @@ export type Database = {
       }
     }
     Functions: {
-      set_my_case_count: {
-        Args: { p_campaign_id: string; p_case_count: number; p_month: string }
+      admin_issue_update_token: {
+        Args: { p_squad_member_id: string }
+        Returns: string
+      }
+      admin_revoke_update_token: {
+        Args: { p_squad_member_id: string }
+        Returns: boolean
+      }
+      admin_update_link_status: {
+        Args: never
         Returns: {
-          campaign_id: string
-          case_count: number
-          id: string
-          month: string
+          link_issued_at: string
+          member_name: string
           squad_member_id: string
-          updated_at: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "member_case_counts"
-          isOneToOne: true
-          isSetofReturn: false
-        }
+          squad_name: string
+        }[]
+      }
+      get_update_context: {
+        Args: { p_token: string }
+        Returns: {
+          campaign_name: string
+          case_count: number
+          member_name: string
+          month: string
+          squad_name: string
+        }[]
+      }
+      submit_case_count: {
+        Args: { p_case_count: number; p_token: string }
+        Returns: {
+          case_count: number
+          month: string
+        }[]
       }
     }
     Enums: {
