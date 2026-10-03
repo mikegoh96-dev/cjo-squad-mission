@@ -67,6 +67,36 @@ export function ArtDefs() {
         <clipPath id="art-clip-flame">
           <path d={FLAME_PATH} />
         </clipPath>
+        {/* Member avatars (person.tsx): soft 3D skin, glossy hair, deep eyes */}
+        <radialGradient id="art-av-skin" cx="0.38" cy="0.32" r="0.75">
+          <stop offset="0" stopColor="#FFE9D9" />
+          <stop offset="0.55" stopColor="#F9CCAE" />
+          <stop offset="1" stopColor="#E7A07E" />
+        </radialGradient>
+        <linearGradient id="art-av-neck" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#D98F6E" />
+          <stop offset="1" stopColor="#F2B999" />
+        </linearGradient>
+        <linearGradient id="art-av-hair-woman" x1="0.2" y1="0" x2="0.8" y2="1">
+          <stop offset="0" stopColor="#B87A4E" />
+          <stop offset="0.45" stopColor="#8A5134" />
+          <stop offset="1" stopColor="#5A3020" />
+        </linearGradient>
+        <linearGradient id="art-av-hair-man" x1="0.2" y1="0" x2="0.8" y2="1">
+          <stop offset="0" stopColor="#7E5640" />
+          <stop offset="0.5" stopColor="#4F3426" />
+          <stop offset="1" stopColor="#2F1F17" />
+        </linearGradient>
+        <radialGradient id="art-av-iris" cx="0.5" cy="0.62" r="0.6">
+          <stop offset="0" stopColor="#B08465" />
+          <stop offset="0.6" stopColor="#6B4632" />
+          <stop offset="1" stopColor="#3A251B" />
+        </radialGradient>
+        <linearGradient id="art-av-shirt" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#ffffff" stopOpacity="0.38" />
+          <stop offset="0.5" stopColor="#ffffff" stopOpacity="0" />
+          <stop offset="1" stopColor="#000000" stopOpacity="0.12" />
+        </linearGradient>
         {/* Ambient glow behind hero objects */}
         <radialGradient id="art-glow" cx="0.5" cy="0.5" r="0.5">
           <stop offset="0" stopColor="#ffffff" stopOpacity="0.55" />

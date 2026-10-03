@@ -210,7 +210,7 @@ export function MemberCard({
       {bump + remote > 0 ? <span key={`glow-${bump}-${remote}`} aria-hidden="true" className="animate-card-glow pointer-events-none absolute inset-0 rounded-tile" /> : null}
 
       <div className="flex min-w-0 items-center gap-2">
-        <Avatar name={name} id={id} initials={initials} size="sm" />
+        <Avatar name={name} id={id} initials={initials} size="md" />
         <h3 className="min-w-0 truncate text-[16px] font-bold">{name}</h3>
       </div>
 
