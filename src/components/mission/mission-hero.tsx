@@ -3,7 +3,7 @@
 import { AnimatedNumber } from "@/components/animated-number";
 import { StatusPill } from "@/components/status-pill";
 import { Decor, Meter } from "@/components/ui";
-import { daysInMonth, heroMessage, missionProgress, missionStatus, monthMilestones, nextMilestone } from "@/lib/mission";
+import { daysInMonth, heroMessage, missionProgress, missionStatus, monthMilestones, nextMilestone, pluralCases } from "@/lib/mission";
 import type { CampaignPhase, MonthMission } from "@/lib/progress";
 import { useLiveBoard } from "@/components/squad/live-board";
 import { Trophy3D } from "@/components/art/objects";
@@ -81,7 +81,7 @@ export function MissionHero({
             {progress.percent}%
           </span>
           <span className="truncate text-white/85" data-testid="hero-next">
-            {next ? `Next: ${next.label} at ${next.cases}` : "Every milestone reached"}
+            {next ? `Next: ${next.label} · ${pluralCases(next.cases)}` : "Every milestone reached"}
           </span>
         </div>
       </div>

@@ -71,12 +71,15 @@ export function MomentumCard({
                   className="flex min-w-0 items-center gap-2 rounded-2xl bg-surface-2 px-2.5 py-2"
                 >
                   <Avatar name={p.name} id={p.id} initials={p.initials} size="sm" />
-                  <span className="min-w-0 flex-1 truncate text-[14px] font-semibold">{p.name}</span>
-                  <span
-                    className={`shrink-0 text-[15px] font-extrabold tabular-nums ${n > 0 ? "text-accent-strong" : "text-muted"}`}
-                    data-testid="member-week-value"
-                  >
-                    {formatDelta(n)}
+                  {/* Name above the number so names never get squeezed by big weeks. */}
+                  <span className="flex min-w-0 flex-1 flex-col leading-tight">
+                    <span className="truncate text-[13px] font-semibold">{p.name}</span>
+                    <span
+                      className={`text-[16px] font-extrabold tabular-nums ${n > 0 ? "text-accent-strong" : "text-muted"}`}
+                      data-testid="member-week-value"
+                    >
+                      {formatDelta(n)}
+                    </span>
                   </span>
                 </li>
               );

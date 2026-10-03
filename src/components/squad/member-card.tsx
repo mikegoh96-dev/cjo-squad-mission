@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { saveCaseCount } from "@/app/(dashboard)/actions";
 import { CheckIcon, MinusIcon, PlusIcon, RefreshIcon } from "@/components/icons";
 import { Avatar } from "@/components/ui";
-import { applyTap, cheerFor } from "@/lib/board";
+import { applyTap, cheerFor, rebaseTaps } from "@/lib/board";
 import { useLiveBoard } from "./live-board";
 
 type Status =
@@ -12,11 +12,14 @@ type Status =
   | { kind: "pending" }
   | { kind: "saving" }
   | { kind: "saved" }
+  | { kind: "merged"; other: number }
   | { kind: "conflict"; current: number }
   | { kind: "error" };
 
 /** Wait this long after the last tap, then save once (fast taps = one save). */
 const SAVE_DELAY_MS = 600;
+/** Give up merging after this many conflicts in a row (someone else keeps saving). */
+const MAX_MERGES = 3;
 const BURST = Array.from({ length: 10 }, (_, i) => {
   const angle = (i / 10) * Math.PI * 2;
   return { dx: Math.round(Math.cos(angle) * 46), dy: Math.round(Math.sin(angle) * 46), hue: i % 3 };
@@ -55,6 +58,10 @@ export function MemberCard({
   const inFlight = useRef(false);
   const timer = useRef<number | undefined>(undefined);
   const taps = useRef(0);
+  // True after a save whose outcome is unknown (the request failed, so it may
+  // or may not have been written). Merging then could count taps twice, so a
+  // conflict falls back to showing the stored total.
+  const uncertain = useRef(false);
 
   const show = useCallback((value: number) => {
     displayRef.current = value;
@@ -89,6 +96,8 @@ export function MemberCard({
     if (inFlight.current) return; // the running loop picks up new taps
     inFlight.current = true;
     let savedAny = false;
+    let merges = 0;
+    let other = 0; // cases another phone added that this save was combined with
     try {
       while (displayRef.current !== confirmed.current) {
         setStatus({ kind: "saving" });
@@ -100,23 +109,37 @@ export function MemberCard({
             expectedCount: confirmed.current,
           });
         } catch {
+          uncertain.current = true;
           setStatus({ kind: "error" }); // offline: keep the number, offer Retry
           return;
         }
         if (result.status === "conflict") {
-          confirmed.current = result.currentCount;
-          show(result.currentCount);
-          setStatus({ kind: "conflict", current: result.currentCount });
-          return;
+          // Another phone changed this total first; nothing was written.
+          const current = result.currentCount;
+          if (uncertain.current || merges >= MAX_MERGES) {
+            uncertain.current = false;
+            confirmed.current = current;
+            show(current);
+            setStatus({ kind: "conflict", current });
+            return;
+          }
+          merges += 1;
+          other += current - confirmed.current;
+          const merged = rebaseTaps(displayRef.current, confirmed.current, current);
+          confirmed.current = current;
+          show(merged);
+          continue; // save the combined total
         }
         if (result.status === "error") {
           setStatus({ kind: "error" });
           return;
         }
+        uncertain.current = false;
         confirmed.current = result.caseCount;
         savedAny = true;
       }
-      setStatus(savedAny ? { kind: "saved" } : { kind: "idle" }); // e.g. +1 then -1 before saving
+      // e.g. +1 then -1 before saving: nothing to report
+      setStatus(merges > 0 ? { kind: "merged", other } : savedAny ? { kind: "saved" } : { kind: "idle" });
     } finally {
       inFlight.current = false;
     }
@@ -129,17 +152,20 @@ export function MemberCard({
     };
     window.addEventListener("pagehide", onHide);
     document.addEventListener("visibilitychange", onHide);
+    // Back online: save what the offline taps changed without waiting for Retry.
+    window.addEventListener("online", onHide);
     return () => {
       window.removeEventListener("pagehide", onHide);
       document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("online", onHide);
       onHide();
     };
   }, [flush]);
 
-  // "Saved" fades back to idle.
+  // "Saved" fades back to idle; the longer notes stay a little longer.
   useEffect(() => {
-    if (status.kind !== "saved") return;
-    const t = window.setTimeout(() => setStatus({ kind: "idle" }), 1600);
+    if (status.kind !== "saved" && status.kind !== "merged" && status.kind !== "conflict") return;
+    const t = window.setTimeout(() => setStatus({ kind: "idle" }), status.kind === "saved" ? 1600 : 4000);
     return () => window.clearTimeout(t);
   }, [status]);
 
@@ -168,14 +194,18 @@ export function MemberCard({
     return () => window.clearTimeout(t);
   }, [cheer, bump]);
 
-  // Shrink as digits grow so the number never collides with the -/+ buttons.
-  const size = display >= 1000 ? "text-[21px]" : display >= 100 ? "text-[26px]" : display >= 10 ? "text-[34px]" : "text-[42px]";
+  // Shrink as digits grow, and to the room between the -/+ buttons (container
+  // width minus two 44px buttons and gaps; a digit is ~0.58em), so the number
+  // never touches them.
+  const digits = String(display).length;
+  const maxPx = digits >= 4 ? 21 : digits === 3 ? 26 : digits === 2 ? 34 : 42;
+  const fontSize = `min(${maxPx}px, calc((100cqw - 96px) / ${(digits * 0.58).toFixed(2)}))`;
   return (
     <li
       data-testid="member-card"
       data-member={name}
       data-member-id={id}
-      className="relative flex flex-col overflow-hidden rounded-tile bg-surface p-3.5 shadow-card"
+      className="@container relative flex flex-col overflow-hidden rounded-tile bg-surface p-3.5 shadow-card"
     >
       {bump + remote > 0 ? <span key={`glow-${bump}-${remote}`} aria-hidden="true" className="animate-card-glow pointer-events-none absolute inset-0 rounded-tile" /> : null}
 
@@ -202,7 +232,8 @@ export function MemberCard({
             key={`n-${bump}-${remote}`}
             data-testid="member-count"
             aria-live="polite"
-            className={`${bump + remote > 0 ? "animate-number-pop" : ""} ${size} leading-none font-extrabold tracking-tight tabular-nums`}
+            className={`${bump + remote > 0 ? "animate-number-pop" : ""} leading-none font-extrabold tracking-tight tabular-nums`}
+            style={{ fontSize }}
           >
             {display}
           </span>
@@ -246,14 +277,19 @@ export function MemberCard({
         ) : null}
       </div>
 
-      <p className="mt-2 flex min-h-5 items-center justify-center gap-1 text-center text-[12px] font-semibold" data-testid="member-status">
+      <p className="mt-2 flex min-h-5 items-center justify-center gap-1 text-center text-[12px] leading-tight font-semibold" data-testid="member-status">
         {status.kind === "error" ? (
           <button type="button" onClick={() => void flush()} className="inline-flex items-center gap-1 text-danger-text">
             <RefreshIcon className="size-3.5" />
             Not saved · Retry
           </button>
         ) : status.kind === "conflict" ? (
-          <span className="text-warning-text">Updated elsewhere: now {status.current}</span>
+          <span className="text-warning-text">Updated elsewhere</span>
+        ) : status.kind === "merged" ? (
+          <span className="inline-flex items-center gap-1 text-good-text">
+            <CheckIcon className="size-3.5" />
+            {status.other > 0 ? `+${status.other} added elsewhere` : "Saved with another update"}
+          </span>
         ) : cheer ? (
           <span key={`c-${bump}`} className="animate-pop text-violet">
             {cheer}

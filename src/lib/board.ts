@@ -6,6 +6,15 @@ export function applyTap(total: number, delta: number): number {
   return Math.min(MAX_CASE_COUNT, Math.max(0, total + delta));
 }
 
+/**
+ * After a save conflict (another phone changed the total first and nothing was
+ * written), keep this phone's unsaved change on top of the newer total: taps
+ * are additive, so +2 here and +3 elsewhere from 0 means 5.
+ */
+export function rebaseTaps(shown: number, confirmed: number, current: number): number {
+  return applyTap(current, shown - confirmed);
+}
+
 /** Team-wide cheers shown on + taps: positive, never comparative. */
 export const CHEERS = ["Let's go!", "Nice!", "Boom!", "On fire!", "Keep it up!", "Every case counts!", "Momentum!", "Yes!"];
 

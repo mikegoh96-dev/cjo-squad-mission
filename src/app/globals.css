@@ -134,6 +134,12 @@ body {
   background-attachment: fixed;
 }
 
+/* Fast repeated taps on -/+ must never double-tap-zoom (iOS Safari). */
+button,
+a {
+  touch-action: manipulation;
+}
+
 /* Faint light rays behind everything (depth without noise). */
 body::before {
   content: "";

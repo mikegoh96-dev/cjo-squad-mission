@@ -71,7 +71,7 @@ export function missionStatus(input: {
 
 export const STATUS_LABEL: Record<MissionStatus, string> = {
   upcoming: "Upcoming",
-  "not-started": "Mission launched",
+  "not-started": "Ready to start",
   "behind-pace": "Let's build momentum",
   "on-track": "Mission on track",
   "almost-there": "Almost there",
@@ -186,6 +186,7 @@ export function heroMessage(progress: MissionProgress, phase: MonthPhase, monthL
 /** "2 more cases to unlock Momentum" / "Every milestone unlocked". */
 export function unlockMessage(progress: MissionProgress, next: MonthMilestone | null): string {
   if (!next) return "Every milestone unlocked";
+  if (next.key === "started") return "One case starts the mission";
   const n = next.cases - progress.total;
   return `${n} more ${n === 1 ? "case" : "cases"} to unlock ${next.label}`;
 }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { CHEERS, applyTap, cheerFor, liveMemberWeek, withLocalChanges } from "./board.ts";
+import { CHEERS, applyTap, cheerFor, liveMemberWeek, rebaseTaps, withLocalChanges } from "./board.ts";
 
 test("taps never go below 0 or above 1000", () => {
   assert.equal(applyTap(0, -1), 0);
@@ -33,4 +33,12 @@ test("each member's weekly contribution follows live taps", () => {
   assert.deepEqual(liveMemberWeek(serverWeek, serverCounts, serverCounts), { a: 2, b: 0, c: 0 });
   assert.deepEqual(liveMemberWeek(serverWeek, serverCounts, { a: 7, b: 1, c: 1 }), { a: 4, b: 0, c: 1 });
   assert.deepEqual(liveMemberWeek(serverWeek, serverCounts, { a: 4 }).a, 1, "a correction lowers it");
+});
+
+test("a conflict keeps this phone's taps on top of the newer total", () => {
+  assert.equal(rebaseTaps(2, 0, 3), 5); // +2 here, +3 elsewhere
+  assert.equal(rebaseTaps(4, 5, 7), 6); // a correction (-1) still applies
+  assert.equal(rebaseTaps(0, 2, 1), 0); // never below 0
+  assert.equal(rebaseTaps(1000, 990, 995), 1000); // never above 1000
+  assert.equal(rebaseTaps(3, 3, 8), 8); // nothing unsaved: adopt the newer total
 });

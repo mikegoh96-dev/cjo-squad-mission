@@ -39,7 +39,7 @@ export function SquadBoard({
           No members yet. Your squad lead will add everyone soon.
         </div>
       ) : (
-        <ul className="mt-3 grid grid-cols-2 gap-3" data-testid="squad-board">
+        <ul className="mt-3 grid grid-cols-1 gap-3 min-[360px]:grid-cols-2" data-testid="squad-board">
           {members.map((m) => (
             <MemberCard key={m.id} id={m.id} name={m.name} initials={m.initials} serverCount={m.count} />
           ))}

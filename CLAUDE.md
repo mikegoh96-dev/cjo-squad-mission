@@ -69,8 +69,12 @@ total. Mitigations:
   whole numbers 0–1000;
 - saves are conflict-safe: a card sends the last total it confirmed; the
   function locks the member row and returns `saved`, `unchanged` (retries
-  never inflate) or `conflict` (nothing written; the card shows the newer
-  total: "Updated elsewhere: now X");
+  never inflate) or `conflict` (nothing written). On a conflict the card adds
+  its unsaved taps on top of the newer total and saves again ("+n added
+  elsewhere"; `rebaseTaps` in `board.ts`), unless an earlier save's outcome is
+  unknown (request failed): then it shows the stored total ("Updated
+  elsewhere") so nothing is counted twice. Failed saves retry by themselves
+  when the network returns (or via Retry);
 - every real change is kept in the append-only `case_update_history`
   (`changed_by` is null: the submitter is unknown), so mistakes or misuse can be
   seen and corrected by an admin. If the link leaks outside the squad, treat it
@@ -91,7 +95,7 @@ The `(dashboard)` route group holds `/` and `/mission` with their
 | `src/lib/progress.ts` | Campaign/month phases, focus month, month filtering, contributions (unit-tested) |
 | `src/lib/initials.ts` | Avatar initials unique within the squad (Jamie JM, Jasmine JS; unit-tested) |
 | `src/app/(dashboard)/` | Dashboard (with member cards), Mission screen, `actions.ts` (`saveCaseCount`), loading skeleton, error state |
-| `src/components/squad/` | `LiveBoardProvider`, `SquadBoard`, `MemberCard` (-/+, debounced conflict-safe saves, hype animation) |
+| `src/components/squad/` | `LiveBoardProvider`, `SquadBoard`, `MemberCard` (-/+, debounced conflict-safe saves, hype animation; the number sizes to the room between the buttons via container units; one column below 360px) |
 | `src/components/live/live-sync.tsx` | Real-time sync (Realtime + polling fallback) and the Live badge |
 | `src/lib/supabase/browser.ts` | Browser client for Realtime only (publishable key) |
 | `src/components/` | `ui.tsx` (Card, Meter, Ring, Avatar), icons, `app-shell`, `nav/bottom-nav`, `mission/*` |

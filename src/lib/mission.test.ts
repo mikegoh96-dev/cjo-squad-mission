@@ -152,6 +152,8 @@ test("unlock message points at the next milestone", () => {
   assert.equal(unlockMessage(p, nextMilestone(monthMilestones(p, "October"))), "2 more cases to unlock Momentum");
   const q = missionProgress(14, 20);
   assert.equal(unlockMessage(q, nextMilestone(monthMilestones(q, "October"))), "1 more case to unlock Momentum");
+  const zero = missionProgress(0, 20);
+  assert.equal(unlockMessage(zero, nextMilestone(monthMilestones(zero, "October"))), "One case starts the mission");
   const done = missionProgress(20, 20);
   assert.equal(unlockMessage(done, nextMilestone(monthMilestones(done, "October"))), "Every milestone unlocked");
 });

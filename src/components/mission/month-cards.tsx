@@ -75,9 +75,19 @@ export function MonthCards({
                     </span>
                   ) : null}
                 </div>
-                <p className="text-[15px] font-bold tabular-nums">
-                  {m.progress.total} / {m.progress.target} cases
-                </p>
+                {/* Status shares the count row so every bar spans the full width. */}
+                <div className="flex items-baseline gap-2">
+                  <p className="shrink-0 text-[15px] font-bold tabular-nums">
+                    {m.progress.total} / {m.progress.target} cases
+                  </p>
+                  <span
+                    className={`ml-auto min-w-0 text-right text-[12px] leading-tight font-bold ${
+                      done ? "text-good-text" : current ? "text-accent-strong" : "text-muted"
+                    }`}
+                  >
+                    {locked ? "Upcoming" : STATUS_LABEL[m.status]}
+                  </span>
+                </div>
                 <div className="mt-1.5">
                   <Meter
                     size="sm"
@@ -87,13 +97,6 @@ export function MonthCards({
                   />
                 </div>
               </div>
-              <span
-                className={`relative shrink-0 self-start pt-1 text-right text-[12px] font-bold ${
-                  done ? "text-good-text" : current ? "text-accent-strong" : "text-muted"
-                }`}
-              >
-                {locked ? "Upcoming" : STATUS_LABEL[m.status]}
-              </span>
             </li>
           );
         })}
