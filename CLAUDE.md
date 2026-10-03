@@ -176,14 +176,13 @@ Copy `.env.example` to `.env.local` (git-ignored).
   new objects are private until granted.
 - Apply to the hosted project: `npx supabase login`, `npx supabase link
   --project-ref <ref>`, then `npx supabase db push`.
-- Hosted project `tdmpukylkqgibfddedxi` (ap-southeast-1, Postgres 17): the
-  first five migrations are applied and recorded in
-  `supabase_migrations.schema_migrations`. `20261002095229_member_weekly_momentum`
-  must be applied too (SQL editor or `npx supabase db push`); until then the
-  per-member weekly list is simply hidden.
-  `20261002100603_realtime_case_counts` adds both tables to the
-  `supabase_realtime` publication (idempotent); until it is applied, sync falls
-  back to polling ("Auto-updating").
+- Hosted project `tdmpukylkqgibfddedxi` (ap-southeast-1, Postgres 17): all
+  seven migrations are applied and recorded in
+  `supabase_migrations.schema_migrations` (the last two,
+  `member_weekly_momentum` and `realtime_case_counts`, via the SQL editor on
+  2026-10-03; Realtime confirmed "Live" on phones). Without
+  `squad_member_momentum` the per-member weekly list is hidden; without the
+  `supabase_realtime` publication, sync falls back to polling ("Auto-updating").
 - Types were last generated with `@supabase/postgres-meta` against the migrated
   local database (`PG_META_GENERATE_TYPES_DETECT_ONE_TO_ONE_RELATIONSHIPS=true`,
   `PG_META_POSTGREST_VERSION=14.18`), byte-identical to the hosted generator.
