@@ -1,4 +1,6 @@
 // Small presentational primitives shared by the screens.
+import { PersonArt } from "@/components/art/person";
+import { avatarKindFor } from "@/lib/avatars";
 import { initialsFor } from "@/lib/initials";
 
 export function Card({
@@ -147,12 +149,15 @@ export function Avatar({
   size?: "sm" | "md" | "lg";
 }) {
   const dims = { sm: "size-8 text-[11px]", md: "size-11 text-sm", lg: "size-14 text-base" }[size];
+  // Man / woman art for known members (shirt in their tint); initials otherwise.
+  const kind = avatarKindFor(name);
   return (
     <span
       aria-hidden="true"
-      className={`orb flex shrink-0 items-center justify-center rounded-full font-extrabold ${dims} ${tintFor(id)}`}
+      data-avatar={kind ?? "initials"}
+      className={`orb flex shrink-0 items-center justify-center overflow-hidden rounded-full font-extrabold ${dims} ${tintFor(id)}`}
     >
-      {initials ?? initialsFor(name)}
+      {kind ? <PersonArt kind={kind} /> : (initials ?? initialsFor(name))}
     </span>
   );
 }

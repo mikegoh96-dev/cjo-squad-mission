@@ -41,6 +41,9 @@
   --btn-lip-soft: #d0d8f0;
   --hero-lip: #2a3790;
   --rays: rgba(255, 255, 255, 0.55);
+  /* Member avatar hair (lighter in dark mode so it reads on dark tints) */
+  --avatar-hair: #3a2b4d;
+  --avatar-hair-sheen: #5a4673;
   /* Corner scale (one source of truth; Tailwind maps rounded-card/tile/btn to these) */
   --r-card: 28px;
   --r-tile: 24px;
@@ -83,6 +86,8 @@
     --btn-lip-soft: #12152a;
     --hero-lip: #18205a;
     --rays: rgba(120, 140, 255, 0.06);
+    --avatar-hair: #7a64a3;
+    --avatar-hair-sheen: #a993d1;
   }
 }
 

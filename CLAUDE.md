@@ -93,7 +93,8 @@ The `(dashboard)` route group holds `/` and `/mission` with their
 | `src/lib/board.ts` | Tap clamping, cheers, optimistic totals (unit-tested) |
 | `src/lib/mission.ts` | Pure mission maths: progress %, status, milestones, celebration, momentum, messages (unit-tested) |
 | `src/lib/progress.ts` | Campaign/month phases, focus month, month filtering, contributions (unit-tested) |
-| `src/lib/initials.ts` | Avatar initials unique within the squad (Jamie JM, Jasmine JS; unit-tested) |
+| `src/lib/avatars.ts` | Avatar art per member, by display name: Mike and JY = man, Claire, Cynthia, Jamie, Jasmine = woman (unit-tested); add new members here. Art: `src/components/art/person.tsx` (shirt in the member's tint; hair `--avatar-hair`, lighter in dark mode) |
+| `src/lib/initials.ts` | Avatar initials unique within the squad (fallback for members not in `avatars.ts`; unit-tested) |
 | `src/app/(dashboard)/` | Dashboard (with member cards), Mission screen, `actions.ts` (`saveCaseCount`), loading skeleton, error state |
 | `src/components/squad/` | `LiveBoardProvider`, `SquadBoard`, `MemberCard` (-/+, debounced conflict-safe saves, hype animation; the number sizes to the room between the buttons via container units; one column below 360px) |
 | `src/components/live/live-sync.tsx` | Real-time sync (Realtime + polling fallback) and the Live badge |
