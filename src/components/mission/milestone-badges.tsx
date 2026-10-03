@@ -1,5 +1,6 @@
 import { Bolt3D, type ArtProps, Medal3D, Star3D, Trophy3D } from "@/components/art/objects";
 import { CheckIcon, LockIcon } from "@/components/icons";
+import { Decor } from "@/components/ui";
 import { type MilestoneKey, type MonthMilestone, pluralCases } from "@/lib/mission";
 
 const OBJECT: Record<MilestoneKey, (p: ArtProps) => React.ReactNode> = {
@@ -24,17 +25,22 @@ export function MilestoneBadges({ milestones }: { milestones: MonthMilestone[] }
           <li
             key={m.key}
             data-testid={`milestone-${m.key}`}
-            className={`relative isolate overflow-hidden rounded-[24px] p-4 pt-3 ${
+            className={`relative isolate rounded-tile p-4 pt-3 ${
               m.reached
-                ? "shine bg-brand text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_5px_0_-1px_var(--hero-lip),0_16px_28px_-16px_rgba(61,95,224,0.9)]"
+                ? "bg-brand text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_5px_0_-1px_var(--hero-lip),0_16px_28px_-16px_rgba(61,95,224,0.9)]"
                 : "bg-surface text-foreground shadow-tile"
             }`}
           >
-            {m.reached ? (
-              <span aria-hidden="true" className="absolute -top-10 -right-10 -z-10 size-28 rounded-full bg-white/15 blur-xl" />
-            ) : (
-              <span aria-hidden="true" className="absolute -top-10 -right-10 -z-10 size-28 rounded-full bg-violet-soft blur-xl" />
-            )}
+            <Decor>
+              <span
+                className={`absolute -top-12 -right-12 size-36 rounded-full ${
+                  m.reached
+                    ? "bg-[radial-gradient(circle,rgba(255,255,255,0.28),transparent_70%)]"
+                    : "bg-[radial-gradient(circle,var(--violet-soft),transparent_70%)]"
+                }`}
+              />
+              {m.reached ? <span className="shine-sweep" /> : null}
+            </Decor>
             <Obj
               className={`relative -ml-1 size-[68px] ${m.reached ? "animate-unlock" : ""}`}
               muted={!m.reached}

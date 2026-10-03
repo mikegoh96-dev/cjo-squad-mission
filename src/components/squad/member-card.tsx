@@ -175,9 +175,9 @@ export function MemberCard({
       data-testid="member-card"
       data-member={name}
       data-member-id={id}
-      className="relative flex flex-col overflow-hidden rounded-[26px] bg-surface p-3.5 shadow-card"
+      className="relative flex flex-col overflow-hidden rounded-tile bg-surface p-3.5 shadow-card"
     >
-      {bump + remote > 0 ? <span key={`glow-${bump}-${remote}`} aria-hidden="true" className="animate-card-glow pointer-events-none absolute inset-0 rounded-[26px]" /> : null}
+      {bump + remote > 0 ? <span key={`glow-${bump}-${remote}`} aria-hidden="true" className="animate-card-glow pointer-events-none absolute inset-0 rounded-tile" /> : null}
 
       <div className="flex min-w-0 items-center gap-2">
         <Avatar name={name} id={id} initials={initials} size="sm" />

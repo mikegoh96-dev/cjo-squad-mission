@@ -127,7 +127,7 @@ export function Celebration({
             opacity: leaving ? 0 : 1 - Math.min(0.6, Math.max(Math.abs(offset.x) / 300, Math.abs(offset.y) / 150)),
             transition: dragging && !leaving ? "none" : "transform 200ms ease-out, opacity 200ms ease-out",
           }}
-          className="animate-toast flex touch-none items-center gap-3 rounded-[22px] bg-surface p-4 shadow-card ring-1 ring-hairline select-none"
+          className="animate-toast flex touch-none items-center gap-3 rounded-tile bg-surface p-4 shadow-card ring-1 ring-hairline select-none"
         >
           <span className="bg-brand flex size-12 shrink-0 items-center justify-center rounded-2xl shadow-[0_3px_0_var(--hero-lip)]">
             <Star3D className="animate-unlock size-10" />

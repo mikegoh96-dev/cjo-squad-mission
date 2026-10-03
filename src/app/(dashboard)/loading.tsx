@@ -21,7 +21,7 @@ export default function Loading() {
         <Bar onPage className="mt-3 h-8 w-60" />
         <Bar onPage className="mt-3 h-3 w-40" />
       </div>
-      <div className="animate-shimmer bg-brand h-[300px] rounded-[32px] opacity-40" />
+      <div className="animate-shimmer bg-brand h-[300px] rounded-card opacity-40" />
       <Card>
         <div className="flex items-center gap-3">
           <div className="animate-shimmer size-11 rounded-2xl bg-surface-2" />

@@ -7,7 +7,7 @@ import { Bolt3D, Medal3D, Star3D, Trophy3D } from "@/components/art/objects";
 import { MilestoneBadges } from "@/components/mission/milestone-badges";
 import { MonthCards } from "@/components/mission/month-cards";
 import { StatusPill } from "@/components/status-pill";
-import { Card, Eyebrow, Meter, Ring } from "@/components/ui";
+import { Card, Decor, Eyebrow, Meter, Ring } from "@/components/ui";
 import { getDashboard } from "@/lib/data/dashboard";
 import { ENCOURAGEMENT, nextMilestone, remainingMessage, unlockMessage } from "@/lib/mission";
 
@@ -25,8 +25,10 @@ export default async function MissionPage() {
 
   return (
     <AppShell eyebrow={`${focus.label} mission`} title={ENCOURAGEMENT[focus.status]}>
-      <Card className="animate-rise relative isolate flex flex-col items-center overflow-hidden text-center" aria-labelledby="mission-ring-title">
-        <span aria-hidden="true" className="absolute -top-16 left-1/2 -z-10 size-64 -translate-x-1/2 rounded-full bg-accent-soft blur-2xl" />
+      <Card className="animate-rise relative isolate flex flex-col items-center text-center" aria-labelledby="mission-ring-title">
+        <Decor radius="card">
+          <span className="absolute -top-20 left-1/2 size-72 -translate-x-1/2 rounded-full bg-[radial-gradient(circle,var(--accent-soft),transparent_70%)]" />
+        </Decor>
         <Star3D className="animate-float pointer-events-none absolute top-4 right-4 size-12" />
         <h2 id="mission-ring-title" className="sr-only">
           {focus.label} progress

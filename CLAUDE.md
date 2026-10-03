@@ -115,6 +115,15 @@ card glow, confetti). Everything decorative is off under
 gradient (`bg-brand`), bottom navigation (Squad · Mission). Status is always
 icon + label; green = complete only.
 
+**Corners:** one radius scale only: `rounded-card` (28px: page cards, hero,
+nav, banners), `rounded-tile` (24px: tiles inside cards, member cards,
+milestones), `rounded-btn` (16px), `rounded-full` (pills). The runtime values
+are `--r-card/tile/btn` on `:root` (`@theme inline` values are not runtime
+variables). Glows, rays and shine go inside `<Decor>` (`ui.tsx`; parent
+`relative isolate`), which clips with `clip-path` because iOS Safari lets
+animated/blurred children escape `overflow-hidden` + radius. Never use blur
+filters inside rounded cards; use radial gradients.
+
 **3D achievement objects** (`src/components/art/`): original inline-SVG assets
 (Trophy, Medal, Crown, Rocket, Star, Bolt, Flame, Gem) built on one system:
 shared materials in `art-defs.tsx` (rendered once in the root layout), key light

@@ -31,7 +31,7 @@ export function MomentumCard({
   return (
     <Card className="animate-rise [animation-delay:60ms]" aria-labelledby="momentum-title">
       <div className="flex items-center gap-3">
-        <span className="relative flex size-14 shrink-0 items-center justify-center rounded-[18px] bg-flame-soft shadow-tile">
+        <span className="relative flex size-14 shrink-0 items-center justify-center rounded-2xl bg-flame-soft shadow-tile">
           <Flame3D className="size-12" />
         </span>
         <div className="min-w-0">

@@ -30,7 +30,7 @@ export function BottomNav() {
       aria-label="Main"
       className="pointer-events-none fixed inset-x-0 bottom-0 z-30 pb-[max(12px,env(safe-area-inset-bottom))]"
     >
-      <div className="pointer-events-auto mx-auto flex w-[calc(100%-32px)] max-w-md items-center gap-2 rounded-[26px] bg-surface/95 p-2 shadow-[0_10px_40px_-12px_rgba(30,40,100,0.35)] ring-1 ring-hairline backdrop-blur">
+      <div className="pointer-events-auto mx-auto flex w-[calc(100%-32px)] max-w-md items-center gap-2 rounded-card bg-surface/95 p-2 shadow-[0_10px_40px_-12px_rgba(30,40,100,0.35)] ring-1 ring-hairline backdrop-blur">
         {tab("/", "Squad", HomeIcon)}
         {tab("/mission", "Mission", FlagIcon)}
       </div>

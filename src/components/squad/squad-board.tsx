@@ -34,7 +34,7 @@ export function SquadBoard({
         <span className="shrink-0 text-[13px] text-muted">A–Z</span>
       </div>
       {members.length === 0 ? (
-        <div className="mt-3 flex items-center gap-3 rounded-[24px] bg-surface p-4 text-[15px] text-muted shadow-card">
+        <div className="mt-3 flex items-center gap-3 rounded-tile bg-surface p-4 text-[15px] text-muted shadow-card">
           <UsersIcon className="size-5" />
           No members yet. Your squad lead will add everyone soon.
         </div>
@@ -46,7 +46,7 @@ export function SquadBoard({
         </ul>
       )}
       <div
-        className="mt-4 flex items-center justify-between rounded-[22px] bg-accent-soft px-4 py-3 shadow-tile"
+        className="mt-4 flex items-center justify-between rounded-tile bg-accent-soft px-4 py-3 shadow-tile"
         data-testid="squad-total"
       >
         <span className="flex items-center gap-2 text-[15px] font-bold text-accent-strong">

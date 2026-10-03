@@ -8,7 +8,7 @@ export function Card({
   ...rest
 }: React.HTMLAttributes<HTMLElement> & { as?: "section" | "div" | "article" }) {
   return (
-    <Tag className={`rounded-[28px] bg-surface p-5 shadow-card ${className}`} {...rest}>
+    <Tag className={`rounded-card bg-surface p-5 shadow-card ${className}`} {...rest}>
       {children}
     </Tag>
   );
@@ -153,6 +153,33 @@ export function Avatar({
       className={`orb flex shrink-0 items-center justify-center rounded-full font-extrabold ${dims} ${tintFor(id)}`}
     >
       {initials ?? initialsFor(name)}
+    </span>
+  );
+}
+
+/**
+ * Decorative layer (glows, rays, shine) clipped to the parent's rounded shape.
+ * Uses clip-path rather than overflow:hidden alone: iOS Safari lets blurred or
+ * animated (composited) children escape overflow:hidden + border-radius, which
+ * shows as square corners. The parent must be `relative isolate`.
+ */
+export function Decor({
+  radius = "tile",
+  className = "",
+  children,
+}: {
+  radius?: "card" | "tile";
+  className?: string;
+  children?: React.ReactNode;
+}) {
+  const r = `var(--r-${radius})`;
+  return (
+    <span
+      aria-hidden="true"
+      className={`pointer-events-none absolute inset-0 -z-10 overflow-hidden ${className}`}
+      style={{ borderRadius: r, clipPath: `inset(0 round ${r})` }}
+    >
+      {children}
     </span>
   );
 }

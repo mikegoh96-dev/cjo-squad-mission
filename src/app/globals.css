@@ -41,6 +41,10 @@
   --btn-lip-soft: #d0d8f0;
   --hero-lip: #2a3790;
   --rays: rgba(255, 255, 255, 0.55);
+  /* Corner scale (one source of truth; Tailwind maps rounded-card/tile/btn to these) */
+  --r-card: 28px;
+  --r-tile: 24px;
+  --r-btn: 16px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -110,9 +114,9 @@
   --color-danger-soft: var(--danger-soft);
   --font-sans: var(--font-jakarta);
   /* Radii */
-  --radius-card: 28px;
-  --radius-tile: 22px;
-  --radius-btn: 16px;
+  --radius-card: var(--r-card);
+  --radius-tile: var(--r-tile);
+  --radius-btn: var(--r-btn);
   /* Depth */
   --shadow-card: inset 0 1px 0 var(--card-highlight), 0 5px 0 -1px var(--card-lip), 0 18px 32px -18px rgba(40, 60, 140, 0.32);
   --shadow-tile: inset 0 1px 0 var(--card-highlight), 0 3px 0 -1px var(--card-lip), 0 10px 20px -14px rgba(40, 60, 140, 0.3);
@@ -274,15 +278,13 @@ body::before {
 .animate-ping-soft { animation: ping-soft 1.8s cubic-bezier(0, 0, 0.2, 1) infinite; }
 .animate-float { animation: float 4.5s ease-in-out infinite; }
 .animate-unlock { animation: unlock 0.6s var(--ease-spring) both; }
-.shine { position: relative; overflow: hidden; }
-.shine::after {
-  content: "";
+/* Light sweep across unlocked badges (place inside a <Decor> layer). */
+.shine-sweep {
   position: absolute;
   inset: 0;
   width: 40%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
   animation: shine 3.6s ease-in-out infinite;
-  pointer-events: none;
 }
 .animate-confetti { animation: confetti 2.6s cubic-bezier(0.25, 0.6, 0.4, 1) both; }
 .animate-toast { animation: toast-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
@@ -294,6 +296,6 @@ body::before {
   .animate-draw { animation: none !important; stroke-dashoffset: 0; }
   .animate-confetti, .animate-float-up, .animate-burst, .animate-card-glow, .animate-ping-soft { display: none; }
   .animate-number-pop, .animate-float, .animate-unlock { animation: none !important; }
-  .shine::after { display: none; }
+  .shine-sweep { display: none; }
   *, *::before, *::after { transition-duration: 0.01ms !important; }
 }

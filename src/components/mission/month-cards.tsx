@@ -2,7 +2,7 @@
 
 import { Crown3D, Rocket3D, Trophy3D } from "@/components/art/objects";
 import { CheckIcon, LockIcon } from "@/components/icons";
-import { Eyebrow, Meter } from "@/components/ui";
+import { Decor, Eyebrow, Meter } from "@/components/ui";
 import { useOptionalLiveBoard } from "@/components/squad/live-board";
 import { STATUS_LABEL, daysInMonth, missionProgress, missionStatus } from "@/lib/mission";
 import type { MonthMission } from "@/lib/progress";
@@ -45,12 +45,14 @@ export function MonthCards({
               key={m.month}
               data-testid={`month-${m.month}`}
               aria-current={current ? "true" : undefined}
-              className={`relative isolate flex items-center gap-3 overflow-hidden rounded-[24px] bg-surface p-3.5 pr-4 shadow-card ${
+              className={`relative isolate flex items-center gap-3 rounded-tile bg-surface p-3.5 pr-4 shadow-card ${
                 current ? "ring-2 ring-accent/40" : ""
               }`}
             >
               {current ? (
-                <span aria-hidden="true" className="absolute -top-12 -left-10 -z-10 size-36 rounded-full bg-accent-soft blur-xl" />
+                <Decor>
+                  <span className="absolute -top-14 -left-12 size-44 rounded-full bg-[radial-gradient(circle,var(--accent-soft),transparent_70%)]" />
+                </Decor>
               ) : null}
               <span className="relative shrink-0">
                 <Obj className={`size-16 ${current ? "animate-float" : ""}`} muted={locked} />

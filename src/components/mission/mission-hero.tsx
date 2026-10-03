@@ -2,7 +2,7 @@
 
 import { AnimatedNumber } from "@/components/animated-number";
 import { StatusPill } from "@/components/status-pill";
-import { Meter } from "@/components/ui";
+import { Decor, Meter } from "@/components/ui";
 import { daysInMonth, heroMessage, missionProgress, missionStatus, monthMilestones, nextMilestone } from "@/lib/mission";
 import type { CampaignPhase, MonthMission } from "@/lib/progress";
 import { useLiveBoard } from "@/components/squad/live-board";
@@ -33,14 +33,14 @@ export function MissionHero({
     <section
       aria-labelledby="hero-title"
       data-testid="mission-hero"
-      className="animate-rise relative mt-6 rounded-[32px] p-5 text-white shadow-[0_8px_0_-2px_var(--hero-lip),0_24px_40px_-18px_rgba(61,95,224,0.85)]"
+      className="animate-rise relative isolate mt-6 rounded-card p-5 text-white shadow-[0_8px_0_-2px_var(--hero-lip),0_24px_40px_-18px_rgba(61,95,224,0.85)]"
     >
-      {/* Decoration, clipped to the card: gradient, light rays, soft orbs, top highlight */}
-      <div aria-hidden="true" className="bg-brand absolute inset-0 overflow-hidden rounded-[32px] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]">
-        <div className="absolute -top-24 -right-20 size-80 bg-[repeating-conic-gradient(from_0deg,rgba(255,255,255,0.13)_0deg_7deg,transparent_7deg_20deg)] [mask-image:radial-gradient(circle,#000_0%,transparent_70%)]" />
-        <div className="absolute -bottom-16 -left-10 size-44 rounded-full bg-white/10 blur-2xl" />
-        <div className="absolute top-24 -right-6 size-24 rounded-full bg-[#9d7bff]/30 blur-xl" />
-      </div>
+      {/* Decoration, clipped to the card: gradient, light rays, soft glows, top highlight */}
+      <Decor radius="card" className="bg-brand shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]">
+        <span className="absolute -top-24 -right-20 size-80 bg-[repeating-conic-gradient(from_0deg,rgba(255,255,255,0.13)_0deg_7deg,transparent_7deg_20deg)] [mask-image:radial-gradient(circle,#000_0%,transparent_70%)]" />
+        <span className="absolute -bottom-24 -left-20 size-64 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.16),transparent_70%)]" />
+        <span className="absolute top-16 -right-12 size-40 rounded-full bg-[radial-gradient(circle,rgba(157,123,255,0.45),transparent_70%)]" />
+      </Decor>
       {/* Original 3D trophy, breaking out of the card's top-right corner */}
       <div aria-hidden="true" className="pointer-events-none absolute -top-9 -right-1 w-[118px] min-[400px]:w-[132px]">
         <div className="absolute inset-3 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.55),transparent_65%)]" />
