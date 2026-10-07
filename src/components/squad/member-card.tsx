@@ -5,6 +5,7 @@ import { saveCaseCount } from "@/app/(dashboard)/actions";
 import { CheckIcon, MinusIcon, PlusIcon, RefreshIcon } from "@/components/icons";
 import { Avatar } from "@/components/ui";
 import { applyTap, cheerFor, rebaseTaps } from "@/lib/board";
+import { getOwnPushEndpoint } from "@/lib/push/client";
 import { useLiveBoard } from "./live-board";
 
 type Status =
@@ -45,7 +46,7 @@ export function MemberCard({
   initials: string;
   serverCount: number;
 }) {
-  const { editable, setLocal } = useLiveBoard();
+  const { editable, setLocal, announce } = useLiveBoard();
   const [display, setDisplay] = useState(serverCount);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [fx, setFx] = useState<Fx[]>([]);
@@ -85,9 +86,10 @@ export function MemberCard({
         setFx((list) => [...list.slice(-4), { id: fxId, text: `+${serverCount - before}` }]);
         window.setTimeout(() => setFx((list) => list.filter((f) => f.id !== fxId)), 900);
         setCheer("Just added!");
+        announce(name, serverCount - before);
       }
     }
-  }, [serverCount, show]);
+  }, [serverCount, show, announce, name]);
 
   // Saves until the stored total matches what the card shows (taps made while
   // a save is in flight are saved right after it).
@@ -107,6 +109,7 @@ export function MemberCard({
             squadMemberId: id,
             caseCount: displayRef.current,
             expectedCount: confirmed.current,
+            deviceEndpoint: getOwnPushEndpoint(), // this phone is not notified of its own taps
           });
         } catch {
           uncertain.current = true;

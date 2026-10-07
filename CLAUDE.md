@@ -30,8 +30,9 @@ featured); collective progress; team momentum (net cases today / this week, plus
 member's net this week listed A–Z, never ranked);
 monthly milestones (first case, 50%, 75%, target) with a short celebration;
 one big card per member (A–Z) on the dashboard with -/+ to update their
-count for the open month. Mobile-first. Anything else (notifications, chat, profiles, points,
-analytics, integrations) is out of scope.
+count for the open month. Mobile-first. Push notifications when someone adds
+cases (added 2026-10-07 at the owner's request; see below). Anything else
+(chat, profiles, points, analytics, integrations) is out of scope.
 
 ## Access model: shared link, no login
 
@@ -58,6 +59,21 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
   (Realtime subscribed) or "Auto-updating" (polling).
   Counts belong to the open month, so every card starts at 0 when a new
   mission month begins. There is no separate update page.
+- **Push notifications** (installable web app + Web Push, no third party):
+  each phone opts in on the dashboard (`src/components/push/notifications-card.tsx`;
+  iPhone must first "Add to Home Screen", iOS 16.4+, and the card shows how).
+  The phone's anonymous push subscription is stored via `register_push_device`
+  (`push-actions.ts`, which also sends a one-off welcome notification). When a
+  save **adds** cases (never on corrections), `saveCaseCount` schedules
+  `notifyCasesAdded` with `after()` (the tap is never slowed): it reads the
+  squad total, builds the message (`src/lib/push/message.ts`: "🎉 Cynthia added
+  2 cases" / milestone headlines, squad progress in the body) and sends it to
+  every opted-in device except the phone that tapped (`deliver.ts`; devices
+  answering 404/410 are dropped). Service worker `public/sw.js` shows it (tag
+  per member, so a newer update replaces the older one) and opens the app on
+  tap. Open dashboards also show an in-app pop-up for a teammate's adds.
+  Manifest `src/app/manifest.ts`, icons in `public/` + `src/app/apple-icon.png`.
+  Without the push env vars the card is hidden and nothing is sent.
 
 **Security trade-off (accepted for a trusted internal team tool):** because
 there is no authentication, the system **cannot prove who submitted a count**.
@@ -99,6 +115,7 @@ The `(dashboard)` route group holds `/` and `/mission` with their
 | `src/components/squad/` | `LiveBoardProvider`, `SquadBoard`, `MemberCard` (-/+, debounced conflict-safe saves, hype animation; the number sizes to the room between the buttons via container units; one column below 360px) |
 | `src/components/live/live-sync.tsx` | Real-time sync (Realtime + polling fallback) and the Live badge |
 | `src/lib/supabase/browser.ts` | Browser client for Realtime only (publishable key) |
+| `src/lib/push/` | `message.ts` (wording), `deliver.ts` (fan-out, prune gone devices), `endpoint.ts` (allowed push hosts) — unit-tested; `server.ts` (server-only: config, web-push, `notifyCasesAdded`, `sendWelcome`); `client.ts` (support check, SW registration, this phone's endpoint) |
 | `src/components/` | `ui.tsx` (Card, Meter, Ring, Avatar), icons, `app-shell`, `nav/bottom-nav`, `mission/*` |
 | `scripts/members.mjs` | Admin CLI: list / add / rename / remove members |
 
@@ -164,6 +181,10 @@ Copy `.env.example` to `.env.local` (git-ignored).
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | App (local + Vercel Production/Preview) |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | App (local + Vercel Production/Preview) |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Push: public VAPID key (Vercel Production/Preview) |
+| `VAPID_PRIVATE_KEY` | Push: signs messages. Server only (Vercel), never `NEXT_PUBLIC_`, never committed |
+| `PUSH_SECRET` | Push: lets the server list devices (`push_devices`); its SHA-256 is in `private.push_settings`. Server only, never committed |
+| `VAPID_SUBJECT` | Optional contact URL for push services (defaults to the Vercel production URL) |
 | `SUPABASE_SECRET_KEY` | Admin CLI only, on an admin's machine |
 
 `NEXT_PUBLIC_` values are inlined at build time; redeploy after changing them.
@@ -184,6 +205,9 @@ Copy `.env.example` to `.env.local` (git-ignored).
   2026-10-03; Realtime confirmed "Live" on phones). Without
   `squad_member_momentum` the per-member weekly list is hidden; without the
   `supabase_realtime` publication, sync falls back to polling ("Auto-updating").
+  `20261007090000_push_notifications` (push devices) must be applied with the
+  SQL editor, plus one row in `private.push_settings` holding
+  `sha256(PUSH_SECRET)`; until then push stays off.
 - Types were last generated with `@supabase/postgres-meta` against the migrated
   local database (`PG_META_GENERATE_TYPES_DETECT_ONE_TO_ONE_RELATIONSHIPS=true`,
   `PG_META_POSTGREST_VERSION=14.18`), byte-identical to the hosted generator.
@@ -195,7 +219,9 @@ Tables: `members`, `squads`, `squad_members` (one squad per member),
 `campaigns` (with `time_zone`), `monthly_targets` (squad target per campaign
 month), `member_case_counts` (a member's **current** monthly total, integer
 0–1000), `case_update_history` (append-only audit, written by trigger;
-`changed_by` null: shared-link submitters are unknown).
+`changed_by` null: shared-link submitters are unknown), `push_subscriptions`
+(anonymous opted-in devices: endpoint + keys; private, function access only;
+endpoints must be a known browser push service).
 
 The squad total is **derived**, never stored (`squad_monthly_progress` view /
 `computeSquadProgress`). Campaign targets are data (`monthly_targets`; seeded
@@ -206,7 +232,7 @@ The open month is resolved in the campaign's `time_zone`.
 
 | Role | Can | Cannot |
 | --- | --- | --- |
-| anon / authenticated | SELECT members, squads, squad_members, campaigns, monthly_targets, member_case_counts, squad_monthly_progress; call `submit_case_count(member, count, expected)`, `squad_momentum(squad)`, `squad_member_momentum(squad)`, `member_recent_updates(member, limit)` (currently unused by the UI) | INSERT/UPDATE/DELETE any table; read raw `case_update_history` |
+| anon / authenticated | SELECT members, squads, squad_members, campaigns, monthly_targets, member_case_counts, squad_monthly_progress; call `submit_case_count(member, count, expected)`, `squad_momentum(squad)`, `squad_member_momentum(squad)`, `member_recent_updates(member, limit)` (currently unused by the UI), `register_push_device` / `unregister_push_device` | INSERT/UPDATE/DELETE any table; read raw `case_update_history`; list push devices (`push_devices` / `forget_push_devices` need `PUSH_SECRET`) |
 | service_role (admin CLI) | manage squads, members and counts | — |
 
 The functions are `security definer` with `search_path = ''`; private helpers

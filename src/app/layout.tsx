@@ -17,6 +17,8 @@ export const metadata: Metadata = {
   },
   description: siteConfig.description,
   applicationName: siteConfig.name,
+  // Installable to the Home Screen (required on iPhone for push notifications).
+  appleWebApp: { capable: true, title: "CJO Squad", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

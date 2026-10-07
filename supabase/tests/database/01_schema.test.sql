@@ -10,7 +10,7 @@ select tables_are(
   'public',
   array[
     'members', 'squads', 'squad_members', 'campaigns', 'monthly_targets',
-    'member_case_counts', 'case_update_history'
+    'member_case_counts', 'case_update_history', 'push_subscriptions'
   ],
   'public schema contains exactly the application tables'
 );

@@ -202,6 +202,33 @@ export type Database = {
           },
         ]
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          last_seen_at: string
+          p256dh: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          last_seen_at?: string
+          p256dh: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          last_seen_at?: string
+          p256dh?: string
+        }
+        Relationships: []
+      }
       squad_members: {
         Row: {
           id: string
@@ -286,6 +313,10 @@ export type Database = {
       }
     }
     Functions: {
+      forget_push_devices: {
+        Args: { p_endpoints: string[]; p_secret: string }
+        Returns: number
+      }
       member_recent_updates: {
         Args: { p_limit?: number; p_squad_member_id: string }
         Returns: {
@@ -294,6 +325,18 @@ export type Database = {
           new_count: number
           old_count: number
         }[]
+      }
+      push_devices: {
+        Args: { p_secret: string }
+        Returns: {
+          auth: string
+          endpoint: string
+          p256dh: string
+        }[]
+      }
+      register_push_device: {
+        Args: { p_auth: string; p_endpoint: string; p_p256dh: string }
+        Returns: undefined
       }
       squad_member_momentum: {
         Args: { p_squad_id: string }
@@ -323,6 +366,10 @@ export type Database = {
           previous_count: number
           status: string
         }[]
+      }
+      unregister_push_device: {
+        Args: { p_endpoint: string }
+        Returns: undefined
       }
     }
     Enums: {

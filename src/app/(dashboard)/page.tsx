@@ -7,12 +7,14 @@ import { LiveDot } from "@/components/live/live-sync";
 import { MissionHero } from "@/components/mission/mission-hero";
 import { MomentumCard } from "@/components/mission/momentum-card";
 import { MonthCards } from "@/components/mission/month-cards";
+import { NotificationsCard } from "@/components/push/notifications-card";
 import { LiveBoardProvider } from "@/components/squad/live-board";
 import { SquadBoard } from "@/components/squad/squad-board";
 import { Card } from "@/components/ui";
 import { siteConfig } from "@/config/site";
 import { type Dashboard, getDashboard } from "@/lib/data/dashboard";
 import { relativeTime } from "@/lib/mission";
+import { isPushConfigured } from "@/lib/push/server";
 import type { Contribution } from "@/lib/progress";
 
 export default async function DashboardPage() {
@@ -26,6 +28,8 @@ export default async function DashboardPage() {
   const reached = editable ? milestones.filter((m) => m.reached).at(-1) : undefined;
   const serverCounts = Object.fromEntries(progress.contributions.map((c) => [c.squadMemberId, c.monthCases]));
   const celebrationKey = `cjo:milestone:${squadId}:${focus.month}`;
+  // Push notifications are offered only when the server is fully configured.
+  const vapidPublicKey = isPushConfigured() ? (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null) : null;
 
   return (
     <AppShell
@@ -66,6 +70,7 @@ export default async function DashboardPage() {
                 : null
           }
         />
+        <NotificationsCard vapidPublicKey={vapidPublicKey} />
         <MomentumCard
           today={momentum.today}
           thisWeek={momentum.thisWeek}

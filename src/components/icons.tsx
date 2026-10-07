@@ -68,3 +68,10 @@ export const SwapIcon = (p: IconProps) => (
 );
 export const ChevronRightIcon = (p: IconProps) => <Svg {...p}><path d="M9 5l7 7-7 7" /></Svg>;
 export const XIcon = (p: IconProps) => <Svg {...p}><path d="M6 6l12 12M18 6L6 18" /></Svg>;
+export const BellIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2.2 2.2 0 0 0 4 0" /></Svg>
+);
+/** iOS-style share: a box with an arrow up. */
+export const ShareIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M12 15V3m0 0L8 7m4-4l4 4M8 10H6.5A1.5 1.5 0 0 0 5 11.5v8A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-8a1.5 1.5 0 0 0-1.5-1.5H16" /></Svg>
+);

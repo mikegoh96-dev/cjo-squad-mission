@@ -248,3 +248,22 @@ export function Gem3D({ className, muted, title }: ArtProps) {
     </Art>
   );
 }
+
+/** Notifications: a glossy gold bell with its clapper. */
+export function Bell3D({ className, muted, title }: ArtProps) {
+  const body = "M60 22c-4 0-7 3-7 7v2.6C40 35 32 47 32 62v16l-8 10v4h72v-4l-8-10V62c0-15-8-27-21-30.4V29c0-4-3-7-7-7z";
+  return (
+    <Art className={className} title={title} muted={muted}>
+      <Shadow rx={30} />
+      <circle cx={62.5} cy={103.5} r={8} fill={fill("gold", muted, "-depth")} />
+      <circle cx={60} cy={101} r={8} fill={fill("gold", muted)} />
+      <path d={body} transform="translate(2.5 2.5)" fill={fill("gold", muted, "-depth")} />
+      <path d={body} fill={fill("gold", muted)} />
+      <rect x={24} y={86} width={72} height={8} rx={4} fill={fill("gold", muted, "-top")} />
+      <circle cx={60} cy={23} r={5} fill={fill("gold", muted, "-top")} />
+      <path d="M41 62c0-9 4-17 12-21" fill="none" stroke="#fff" strokeWidth={4} strokeLinecap="round" opacity={0.45} />
+      <Gloss cx={48} cy={52} rx={8} ry={12} />
+      {!muted ? <Twinkle x={97} y={28} s={0.9} /> : null}
+    </Art>
+  );
+}
