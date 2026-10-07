@@ -60,22 +60,28 @@ function sendTo(config: NonNullable<ReturnType<typeof pushConfig>>, device: Push
  */
 export async function notifyCasesAdded(input: {
   squadMemberId: string;
-  added: number;
+  /** This member's total before and after the save. */
+  previousCount: number;
+  caseCount: number;
   exceptEndpoint: string | null;
 }): Promise<void> {
   const config = pushConfig();
-  if (!config || input.added <= 0) return;
+  const added = input.caseCount - input.previousCount;
+  if (!config || added <= 0) return;
   try {
     const dashboard = await getDashboard();
     if (dashboard.state !== "ready") return;
     const { focus, contributions } = dashboard.progress;
     const member = contributions.find((c) => c.squadMemberId === input.squadMemberId);
     if (!member) return;
+    // Everyone else's cases (read now) + this member's exact before value.
+    const others = focus.progress.total - member.monthCases;
     const message = casesAddedMessage({
       squadMemberId: input.squadMemberId,
       name: member.displayName,
-      added: input.added,
+      added,
       squadTotal: focus.progress.total,
+      squadBefore: others + input.previousCount,
       target: focus.progress.target,
       monthLabel: focus.label,
     });

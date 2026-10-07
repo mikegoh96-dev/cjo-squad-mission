@@ -29,6 +29,17 @@ test("crossing a milestone gets a milestone headline", () => {
   assert.match(cleared.body, /target hit! 🎯$/);
 });
 
+test("saves landing together: the exact before-total decides the milestone", () => {
+  // Two +1 saves for the same person land together; both read squad total 2.
+  const first = casesAddedMessage({ ...base, added: 1, squadTotal: 2, squadBefore: 0 });
+  const second = casesAddedMessage({ ...base, added: 1, squadTotal: 2, squadBefore: 1 });
+  assert.equal(first.title, "⭐ Mission started!");
+  assert.equal(first.body, "Cynthia added a case. Squad: 2 / 20 for October · 18 cases to go");
+  assert.equal(second.title, "🎉 Cynthia added a case");
+  // Without it, both would read before = 1 and the milestone would be missed.
+  assert.equal(casesAddedMessage({ ...base, added: 1, squadTotal: 2 }).title, "🎉 Cynthia added a case");
+});
+
 test("past the target: no new milestone, still celebrates", () => {
   const m = casesAddedMessage({ ...base, added: 1, squadTotal: 25 });
   assert.equal(m.title, "🎉 Cynthia added a case");

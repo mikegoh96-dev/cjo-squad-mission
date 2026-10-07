@@ -116,9 +116,19 @@ export function MemberCard({
           setStatus({ kind: "error" }); // offline: keep the number, offer Retry
           return;
         }
-        if (result.status === "conflict") {
+        // "unchanged" means the stored total already equals what we sent, though we
+        // expected a different value. After a failed request that is our own earlier
+        // save that landed (keep it). Otherwise another phone saved the same total first
+        // (both tapped +1 from the same count): nothing of ours was written, so it is a
+        // conflict and our taps go on top.
+        const current =
+          result.status === "conflict"
+            ? result.currentCount
+            : result.status === "unchanged" && !uncertain.current
+              ? result.caseCount
+              : null;
+        if (current !== null) {
           // Another phone changed this total first; nothing was written.
-          const current = result.currentCount;
           if (uncertain.current || merges >= MAX_MERGES) {
             uncertain.current = false;
             confirmed.current = current;
@@ -133,8 +143,8 @@ export function MemberCard({
           show(merged);
           continue; // save the combined total
         }
-        if (result.status === "error") {
-          setStatus({ kind: "error" });
+        if (result.status === "error" || result.status === "conflict") {
+          setStatus({ kind: "error" }); // (conflict is always handled above)
           return;
         }
         uncertain.current = false;

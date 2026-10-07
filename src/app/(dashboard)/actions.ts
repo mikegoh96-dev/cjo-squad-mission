@@ -45,7 +45,8 @@ export async function saveCaseCount(input: {
   if (added > 0) {
     const squadMemberId = input.squadMemberId.toLowerCase();
     const exceptEndpoint = isPushEndpoint(input.deviceEndpoint) ? input.deviceEndpoint : null;
-    after(() => notifyCasesAdded({ squadMemberId, added, exceptEndpoint }));
+    const { previousCount, caseCount } = result;
+    after(() => notifyCasesAdded({ squadMemberId, previousCount, caseCount, exceptEndpoint }));
   }
   return { status: result.status, caseCount: result.caseCount, previousCount: result.previousCount };
 }

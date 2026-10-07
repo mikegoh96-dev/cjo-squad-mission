@@ -18,11 +18,19 @@ export function casesAddedMessage(input: {
   squadMemberId: string;
   name: string;
   added: number;
+  /** The squad total now (shown in the body). */
   squadTotal: number;
+  /**
+   * The squad total just before this save, when known exactly. Saves landing in
+   * the same moment both see the later total, so `squadTotal - added` alone can
+   * miss (or repeat) a milestone. Defaults to `squadTotal - added`.
+   */
+  squadBefore?: number;
   target: number;
   monthLabel: string;
 }): PushMessage {
   const { squadMemberId, name, added, squadTotal, target, monthLabel } = input;
+  const before = Math.max(0, input.squadBefore ?? squadTotal - added);
   const what = added === 1 ? "a case" : pluralCases(added);
   const remaining = Math.max(0, target - squadTotal);
   const squadLine =
@@ -30,7 +38,7 @@ export function casesAddedMessage(input: {
       ? `Squad: ${squadTotal} / ${target} for ${monthLabel} · ${pluralCases(remaining)} to go`
       : `Squad: ${squadTotal} / ${target} for ${monthLabel} · target hit! 🎯`;
 
-  const milestone = crossedMilestone(Math.max(0, squadTotal - added), squadTotal, target, monthLabel);
+  const milestone = crossedMilestone(before, before + added, target, monthLabel);
   if (milestone) {
     return {
       title: `${MILESTONE_EMOJI[milestone.key]} ${milestone.label}!`,

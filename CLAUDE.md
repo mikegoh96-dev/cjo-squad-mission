@@ -67,7 +67,9 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
   save **adds** cases (never on corrections), `saveCaseCount` schedules
   `notifyCasesAdded` with `after()` (the tap is never slowed): it reads the
   squad total, builds the message (`src/lib/push/message.ts`: "🎉 Cynthia added
-  2 cases" / milestone headlines, squad progress in the body) and sends it to
+  2 cases" / milestone headlines, squad progress in the body; the milestone is
+  judged from this member's exact before/after counts so saves landing together
+  never skip or repeat one) and sends it to
   every opted-in device except the phone that tapped (`deliver.ts`; devices
   answering 404/410 are dropped). Service worker `public/sw.js` shows it (tag
   per member, so a newer update replaces the older one) and opens the app on
@@ -89,8 +91,10 @@ total. Mitigations:
   its unsaved taps on top of the newer total and saves again ("+n added
   elsewhere"; `rebaseTaps` in `board.ts`), unless an earlier save's outcome is
   unknown (request failed): then it shows the stored total ("Updated
-  elsewhere") so nothing is counted twice. Failed saves retry by themselves
-  when the network returns (or via Retry);
+  elsewhere") so nothing is counted twice. An `unchanged` reply to a save that
+  expected a different total (two phones tapped +1 from the same count) is
+  handled the same way: someone else saved that total, so the taps go on top.
+  Failed saves retry by themselves when the network returns (or via Retry);
 - every real change is kept in the append-only `case_update_history`
   (`changed_by` is null: the submitter is unknown), so mistakes or misuse can be
   seen and corrected by an admin. If the link leaks outside the squad, treat it
