@@ -199,15 +199,17 @@ Copy `.env.example` to `.env.local` (git-ignored).
 - Apply to the hosted project: `npx supabase login`, `npx supabase link
   --project-ref <ref>`, then `npx supabase db push`.
 - Hosted project `tdmpukylkqgibfddedxi` (ap-southeast-1, Postgres 17): all
-  seven migrations are applied and recorded in
+  eight migrations are applied and recorded in
   `supabase_migrations.schema_migrations` (the last two,
   `member_weekly_momentum` and `realtime_case_counts`, via the SQL editor on
   2026-10-03; Realtime confirmed "Live" on phones). Without
   `squad_member_momentum` the per-member weekly list is hidden; without the
   `supabase_realtime` publication, sync falls back to polling ("Auto-updating").
-  `20261007090000_push_notifications` (push devices) must be applied with the
-  SQL editor, plus one row in `private.push_settings` holding
-  `sha256(PUSH_SECRET)`; until then push stays off.
+  `20261007090000_push_notifications` (push devices) is applied too (SQL
+  editor, 2026-10-07) with one row in `private.push_settings` holding
+  `sha256(PUSH_SECRET)`. Push also needs the three push env vars in Vercel;
+  without them the card stays hidden. Rotating `PUSH_SECRET` means updating
+  that row (`update private.push_settings set secret_hash = sha256(...)`).
 - Types were last generated with `@supabase/postgres-meta` against the migrated
   local database (`PG_META_GENERATE_TYPES_DETECT_ONE_TO_ONE_RELATIONSHIPS=true`,
   `PG_META_POSTGREST_VERSION=14.18`), byte-identical to the hosted generator.
