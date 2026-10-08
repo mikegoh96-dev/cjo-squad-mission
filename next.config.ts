@@ -10,8 +10,14 @@ const securityHeaders = [
   },
 ];
 
+// Identifies this build. The app compares it with /api/version so a Home Screen
+// app can update itself (it has no reload button and resumes old copies).
+const appVersion =
+  process.env.VERCEL_DEPLOYMENT_ID ?? process.env.VERCEL_GIT_COMMIT_SHA ?? `local-${Date.now()}`;
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  env: { APP_VERSION: appVersion },
   typedRoutes: true,
   experimental: {
     // Reuse visited/prefetched pages for 30s so switching tabs is instant.

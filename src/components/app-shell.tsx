@@ -1,3 +1,4 @@
+import { UpdateButton } from "@/components/app-update";
 import { BottomNav } from "@/components/nav/bottom-nav";
 
 /** Page frame: centred mobile column, page header, bottom navigation. */
@@ -28,6 +29,7 @@ export function AppShell({
           {aside}
         </header>
         {children}
+        {nav ? <UpdateButton /> : null}
       </main>
       {nav ? <BottomNav /> : null}
     </>

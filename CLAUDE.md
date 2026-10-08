@@ -76,6 +76,16 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
   tap. Open dashboards also show an in-app pop-up for a teammate's adds.
   Manifest `src/app/manifest.ts`, icons in `public/` + `src/app/apple-icon.png`.
   Without the push env vars the card is hidden and nothing is sent.
+- **App updates** (Home Screen apps resume old copies and have no reload or
+  pull-to-refresh): `next.config.ts` stamps each build with `APP_VERSION`
+  (Vercel deployment id); `/api/version` returns the live one (no-store).
+  `UpdateWatcher` (`src/components/app-update.tsx`, in the dashboard layout)
+  checks on reopen (visibility/pageshow) and every 5 min: on reopen with a new
+  version it reloads at once (once per version, never while a card has taps
+  pending/saving/unsaved: `setUnsaved` in `src/lib/app-version.ts`); otherwise
+  it shows a "New version ready · Update" banner. `UpdateButton` ("Check for
+  updates" + version) sits at the bottom of every screen (`AppShell`). Nobody
+  needs to re-add the app to the Home Screen after a deploy.
 
 **Security trade-off (accepted for a trusted internal team tool):** because
 there is no authentication, the system **cannot prove who submitted a count**.
@@ -120,6 +130,7 @@ The `(dashboard)` route group holds `/` and `/mission` with their
 | `src/components/live/live-sync.tsx` | Real-time sync (Realtime + polling fallback) and the Live badge |
 | `src/lib/supabase/browser.ts` | Browser client for Realtime only (publishable key) |
 | `src/lib/push/` | `message.ts` (wording), `deliver.ts` (fan-out, prune gone devices), `endpoint.ts` (allowed push hosts) — unit-tested; `server.ts` (server-only: config, web-push, `notifyCasesAdded`, `sendWelcome`); `client.ts` (support check, SW registration, this phone's endpoint) |
+| `src/lib/app-version.ts`, `src/components/app-update.tsx`, `src/app/api/version/route.ts` | Self-update for Home Screen apps (see "App updates") |
 | `src/components/` | `ui.tsx` (Card, Meter, Ring, Avatar), icons, `app-shell`, `nav/bottom-nav`, `mission/*` |
 | `scripts/members.mjs` | Admin CLI: list / add / rename / remove members |
 

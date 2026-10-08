@@ -5,6 +5,7 @@ import { saveCaseCount } from "@/app/(dashboard)/actions";
 import { CheckIcon, MinusIcon, PlusIcon, RefreshIcon } from "@/components/icons";
 import { Avatar } from "@/components/ui";
 import { applyTap, cheerFor, rebaseTaps } from "@/lib/board";
+import { setUnsaved } from "@/lib/app-version";
 import { getOwnPushEndpoint } from "@/lib/push/client";
 import { useLiveBoard } from "./live-board";
 
@@ -174,6 +175,12 @@ export function MemberCard({
       onHide();
     };
   }, [flush]);
+
+  // Taps waiting, saving or not saved: an app update must not reload over them.
+  useEffect(() => {
+    setUnsaved(id, status.kind === "pending" || status.kind === "saving" || status.kind === "error");
+    return () => setUnsaved(id, false);
+  }, [id, status.kind]);
 
   // "Saved" fades back to idle; the longer notes stay a little longer.
   useEffect(() => {
