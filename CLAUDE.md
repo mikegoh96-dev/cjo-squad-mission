@@ -121,6 +121,19 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
     live via Realtime (polling every 8 s as fallback).
   Manifest `src/app/manifest.ts`, icons in `public/` + `src/app/apple-icon.png`.
   Without the push env vars the card is hidden and nothing is sent.
+- **Launch splash** (`src/components/splash-screen.tsx`, CSS "Splash" in
+  `globals.css`, mounted in the root layout): server-rendered, so it paints
+  with the first HTML and animates with CSS before any JavaScript. The logo is
+  the app icon's real layers (ray tile + `Trophy3D`). The bar follows
+  observable stages only (page arrived -> app code running -> squad data on
+  screen, i.e. `main` without `[data-testid=loading-state]` -> fonts) and
+  reaches 100% only once the data is on screen; at least 0.7 s from navigation
+  start, then a 0.34 s fade. Runs once per full load (launch, reload, app
+  update), never on tab navigation. Data error -> it steps aside for
+  `error.tsx` (Try again) without reaching 100%. After 12 s a plain-form
+  "Try again" appears (works without JS); `<noscript>` hides it. Reduced
+  motion: fades only. The OS's own launch screen (before the web app starts)
+  is separate and not controlled by the app.
 - **App updates** (Home Screen apps resume old copies and have no reload or
   pull-to-refresh): `next.config.ts` stamps each build with `APP_VERSION`
   (Vercel deployment id); `/api/version` returns the live one (no-store).

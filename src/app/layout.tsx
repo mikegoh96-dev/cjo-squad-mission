@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { ArtDefs } from "@/components/art/art-defs";
+import { SplashScreen } from "@/components/splash-screen";
 import { siteConfig } from "@/config/site";
 import "./globals.css";
 
@@ -37,6 +38,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-dvh flex-col font-sans text-foreground">
         <ArtDefs />
+        <SplashScreen />
+        {/* Without JavaScript the splash would never close. */}
+        <noscript>
+          <style>{".splash{display:none}"}</style>
+        </noscript>
         {children}
       </body>
     </html>
