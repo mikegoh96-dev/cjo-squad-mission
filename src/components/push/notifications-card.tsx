@@ -4,7 +4,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { disablePush, enablePush } from "@/app/(dashboard)/push-actions";
 import { linkDevice, saveDevicePrefs } from "@/app/(dashboard)/squad-actions";
 import { Bell3D } from "@/components/art/objects";
-import { BellIcon, ChevronDownIcon, ShareIcon } from "@/components/icons";
+import { BellIcon, ChevronDownIcon, GearIcon, ShareIcon } from "@/components/icons";
 import { Decor } from "@/components/ui";
 import { getMe, setMe, useMe } from "@/lib/me";
 import { type DevicePrefs, type DeviceSettings, fetchDeviceSettings } from "@/lib/notify-client";
@@ -139,40 +139,57 @@ export function NotificationsCard({
 
   if (view === "on") {
     return (
-      <div data-testid="push-card" data-state="on" className="rounded-tile bg-surface px-4 py-3 shadow-tile">
-        <div className="flex items-center gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-good-soft text-good-text">
-            <BellIcon className="size-[18px]" />
-          </span>
-          <p className="min-w-0 flex-1 text-[14px] font-semibold">
-            Notifications on
-            <span className="block text-[12px] font-medium text-muted">Quiet {QUIET_HOURS_LABEL}: alerts wait until morning</span>
-          </p>
-          <button type="button" onClick={turnOff} className="min-h-11 shrink-0 px-2 text-[13px] font-bold text-muted underline-offset-2 hover:underline">
-            Turn off
-          </button>
+      <>
+        <div data-testid="push-card" data-state="on" className="rounded-tile bg-surface px-4 py-3 shadow-tile">
+          <div className="flex items-center gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-good-soft text-good-text">
+              <BellIcon className="size-[18px]" />
+            </span>
+            <p className="min-w-0 flex-1 text-[14px] font-semibold">
+              Notifications on
+              <span className="block text-[12px] font-medium text-muted">Quiet {QUIET_HOURS_LABEL}: alerts wait until morning</span>
+            </p>
+            <button type="button" onClick={turnOff} className="min-h-11 shrink-0 px-2 text-[13px] font-bold text-muted underline-offset-2 hover:underline">
+              Turn off
+            </button>
+          </div>
         </div>
         {settings ? (
-          <details className="group mt-2 border-t border-hairline pt-1" data-testid="push-settings">
-            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between text-[14px] font-bold text-accent-strong [&::-webkit-details-marker]:hidden">
-              Choose your alerts
-              <ChevronDownIcon className="size-4 transition-transform group-open:rotate-180" />
-            </summary>
-            <ul className="space-y-1 pb-1">
-              <Toggle label="Squad activity" hint="New cases, grouped into one alert" checked={settings.prefs.activity} onChange={(v) => changePref("activity", v)} />
-              <Toggle label="Milestones & rally" hint="Halfway, almost there, target hit" checked={settings.prefs.milestones} onChange={(v) => changePref("milestones", v)} />
-              <Toggle
-                label="My check-in reminders"
-                hint={me && memberNames[me] ? `Only to this phone, for ${memberNames[me]}` : "Pick your card in Check-in first"}
-                checked={settings.prefs.reminders && Boolean(me)}
-                disabled={!me}
-                onChange={(v) => changePref("reminders", v)}
-              />
-              <Toggle label="Weekly recap" hint={RECAP_LABEL} checked={settings.prefs.recap} onChange={(v) => changePref("recap", v)} />
-            </ul>
-          </details>
+          <section data-testid="settings-card" aria-labelledby="settings-title" className="rounded-card bg-surface p-5 shadow-card">
+            <h2 id="settings-title" className="flex items-center gap-2 text-[17px] font-extrabold">
+              <GearIcon className="size-5 text-accent" />
+              Settings
+            </h2>
+            <details className="group mt-3 rounded-tile bg-background/60 px-4" data-testid="push-settings">
+              <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 [&::-webkit-details-marker]:hidden">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-strong">
+                  <BellIcon className="size-[18px]" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[15px] font-bold">Notification alerts</span>
+                  <span className="block text-[12px] font-medium text-muted">
+                    {Object.values(settings.prefs).filter(Boolean).length} of 4 on · quiet {QUIET_HOURS_LABEL}
+                  </span>
+                </span>
+                <ChevronDownIcon className="size-4 shrink-0 text-muted transition-transform group-open:rotate-180" />
+              </summary>
+              <ul className="space-y-1 border-t border-hairline pt-1 pb-2">
+                <Toggle label="Squad activity" hint="New cases, grouped into one alert" checked={settings.prefs.activity} onChange={(v) => changePref("activity", v)} />
+                <Toggle label="Milestones & rally" hint="Halfway, almost there, target hit" checked={settings.prefs.milestones} onChange={(v) => changePref("milestones", v)} />
+                <Toggle
+                  label="My check-in reminders"
+                  hint={me && memberNames[me] ? `Only to this phone, for ${memberNames[me]}` : "Pick your card in Check-in first"}
+                  checked={settings.prefs.reminders && Boolean(me)}
+                  disabled={!me}
+                  onChange={(v) => changePref("reminders", v)}
+                />
+                <Toggle label="Weekly recap" hint={RECAP_LABEL} checked={settings.prefs.recap} onChange={(v) => changePref("recap", v)} />
+              </ul>
+              <p className="pb-3 text-[12px] font-medium text-muted">Alerts wait until 8am during quiet hours ({QUIET_HOURS_LABEL}, Singapore time).</p>
+            </details>
+          </section>
         ) : null}
-      </div>
+      </>
     );
   }
 

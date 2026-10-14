@@ -8,7 +8,6 @@ import { Celebration } from "@/components/mission/celebration";
 import { LiveDot } from "@/components/live/live-sync";
 import { MissionHero } from "@/components/mission/mission-hero";
 import { MomentumCard } from "@/components/mission/momentum-card";
-import { MonthCards } from "@/components/mission/month-cards";
 import { NotificationsCard } from "@/components/push/notifications-card";
 import { LiveBoardProvider } from "@/components/squad/live-board";
 import { SquadBoard } from "@/components/squad/squad-board";
@@ -87,7 +86,6 @@ export default async function DashboardPage() {
           memberWeek={momentum.memberWeek}
           people={progress.contributions.map((c) => ({ id: c.squadMemberId, name: c.displayName, initials: c.initials }))}
         />
-        <MonthCards months={progress.months} dayOfMonth={progress.dayOfMonth} />
       </LiveBoardProvider>
       {reached ? (
         <Celebration

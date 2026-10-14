@@ -26,7 +26,7 @@ shows everywhere immediately.
 ## V1 scope
 
 Shared dashboard; October / November / December missions (current month
-featured); collective progress; team momentum (net cases today / this week, plus each
+featured; the month-by-month cards are on the Mission screen only); collective progress; team momentum (net cases today / this week, plus each
 member's net this week listed A–Z, never ranked);
 monthly milestones (first case, 50%, 75%, target) with a short celebration;
 one big card per member (A–Z) on the dashboard with -/+ to update their
@@ -46,7 +46,7 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
   `src/lib/mission.ts`. Contributions are listed alphabetically, never ranked.
 - **Updating happens on the dashboard**: every member has a big card with this
   month's count and -/+ buttons (`src/components/squad/`). Taps update the
-  card, hero, momentum and month card instantly (`LiveBoardProvider`,
+  card, hero and momentum instantly (`LiveBoardProvider`,
   optimistic); after 600 ms without taps the card saves its new **total** once
   (`saveCaseCount` Server Action). + taps get a short hype animation (number
   pop, floating +1, burst, cheer); squad milestones trigger a celebration
@@ -99,7 +99,8 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
     gets alerts too. If the V2 functions are missing (`PGRST202`), the legacy
     direct send (`notifyCasesAdded`, `message.ts`, `deliver.ts`) runs instead.
   - **Opt-in** stays as before (`notifications-card.tsx`, `register_push_device`,
-    welcome push). When on, "Choose your alerts" toggles four categories
+    welcome push). When on, a separate **Settings** card (menu row
+    "Notification alerts", in `notifications-card.tsx`) toggles four categories
     (`set_push_device_prefs`) and shows the quiet hours. `public/sw.js` shows
     `{title, body, tag, url}` and opens the url (milestones/rally/recap
     `/mission`, reminders `/?checkin=1`).
