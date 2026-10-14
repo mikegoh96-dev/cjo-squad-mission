@@ -24,9 +24,9 @@ import { Trophy3D } from "@/components/art/objects";
  */
 const STAGES = { app: 0.55, data: 0.9 } as const;
 /** Never flash: keep it at least this long after navigation start. */
-const MIN_VISIBLE_MS = 700;
-const FINISH_MS = 220;
-const FADE_MS = 340;
+const MIN_VISIBLE_MS = 2000;
+const FINISH_MS = 450;
+const FADE_MS = 520;
 
 export function SplashScreen() {
   const root = useRef<HTMLDivElement>(null);
@@ -58,7 +58,7 @@ export function SplashScreen() {
 
     const tick = () => {
       // Ease toward the current stage's cap, always stopping just short of it.
-      value += (cap - 0.015 - value) * 0.05;
+      value += (cap - 0.015 - value) * 0.03;
       fillEl.style.transform = `scaleX(${Math.max(0, value)})`;
       raf = requestAnimationFrame(tick);
     };

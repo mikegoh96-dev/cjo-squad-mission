@@ -333,7 +333,7 @@ body::before {
   padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
   background: var(--background);
   color: var(--foreground);
-  transition: opacity 340ms ease, visibility 0s linear 340ms;
+  transition: opacity 520ms ease, visibility 0s linear 520ms;
 }
 .splash[data-state="done"] { opacity: 0; visibility: hidden; pointer-events: none; }
 .splash[data-state="done"] .splash-center { transform: scale(1.03); }
@@ -352,13 +352,13 @@ body::before {
   align-items: center;
   width: min(100%, 320px);
   text-align: center;
-  transition: transform 340ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform 520ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .splash-logo {
   position: relative;
   width: 116px;
   height: 116px;
-  animation: splash-pop 720ms cubic-bezier(0.2, 0.9, 0.25, 1.15) both;
+  animation: splash-pop 950ms cubic-bezier(0.2, 0.9, 0.25, 1.15) both;
 }
 .splash-tile {
   position: absolute;
@@ -378,7 +378,7 @@ body::before {
   width: 45%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
   transform: translateX(-140%) skewX(-18deg);
-  animation: shine 2.8s ease-in-out 650ms infinite;
+  animation: shine 3.2s ease-in-out 900ms infinite;
 }
 .splash-trophy {
   position: absolute;
@@ -386,7 +386,7 @@ body::before {
   top: 14%;
   width: 70%;
   height: 70%;
-  animation: float 3.2s ease-in-out 800ms infinite;
+  animation: float 3.6s ease-in-out 1000ms infinite;
 }
 .splash-title {
   margin-top: 30px;
@@ -396,7 +396,7 @@ body::before {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   text-wrap: balance;
-  animation: splash-rise 420ms cubic-bezier(0.2, 0.8, 0.2, 1) 250ms both;
+  animation: splash-rise 550ms cubic-bezier(0.2, 0.8, 0.2, 1) 400ms both;
 }
 .splash-tag {
   margin-top: 6px;
@@ -405,7 +405,7 @@ body::before {
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--accent);
-  animation: splash-rise 420ms cubic-bezier(0.2, 0.8, 0.2, 1) 450ms both;
+  animation: splash-rise 550ms cubic-bezier(0.2, 0.8, 0.2, 1) 700ms both;
 }
 .splash-bar {
   position: relative;
@@ -417,7 +417,7 @@ body::before {
   background: var(--accent-track);
   box-shadow: inset 0 1px 2px rgba(20, 30, 80, 0.12);
   clip-path: inset(0 round 999px);
-  animation: splash-rise 360ms ease 350ms both;
+  animation: splash-rise 450ms ease 600ms both;
 }
 .splash-fill {
   position: absolute;
@@ -427,7 +427,7 @@ body::before {
   box-shadow: 0 0 12px color-mix(in oklab, var(--brand-to) 55%, transparent);
   transform-origin: left center;
   transform: scaleX(0);
-  animation: splash-boot 900ms cubic-bezier(0.2, 0.8, 0.2, 1) 200ms forwards;
+  animation: splash-boot 1200ms cubic-bezier(0.2, 0.8, 0.2, 1) 500ms forwards;
   will-change: transform;
 }
 .splash-fill::after {
@@ -447,7 +447,7 @@ body::before {
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--muted);
-  animation: splash-rise 360ms ease 450ms both;
+  animation: splash-rise 450ms ease 800ms both;
 }
 .splash-slow {
   display: flex;

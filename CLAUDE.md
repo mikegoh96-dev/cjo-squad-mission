@@ -127,8 +127,8 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
   the app icon's real layers (ray tile + `Trophy3D`). The bar follows
   observable stages only (page arrived -> app code running -> squad data on
   screen, i.e. `main` without `[data-testid=loading-state]` -> fonts, max 0.5 s) and
-  reaches 100% only once the data is on screen; at least 0.7 s from navigation
-  start, then a 0.34 s fade. Runs once per full load (launch, reload, app
+  reaches 100% only once the data is on screen; at least 2 s from navigation
+  start (owner asked for a slower, more visible splash), then a 0.5 s fade. Runs once per full load (launch, reload, app
   update), never on tab navigation. Data error -> it steps aside for
   `error.tsx` (Try again) without reaching 100%. After 12 s a plain-form
   "Try again" appears (works without JS); `<noscript>` hides it. Reduced
