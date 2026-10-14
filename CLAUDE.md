@@ -126,7 +126,7 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
   with the first HTML and animates with CSS before any JavaScript. The logo is
   the app icon's real layers (ray tile + `Trophy3D`). The bar follows
   observable stages only (page arrived -> app code running -> squad data on
-  screen, i.e. `main` without `[data-testid=loading-state]` -> fonts) and
+  screen, i.e. `main` without `[data-testid=loading-state]` -> fonts, max 0.5 s) and
   reaches 100% only once the data is on screen; at least 0.7 s from navigation
   start, then a 0.34 s fade. Runs once per full load (launch, reload, app
   update), never on tab navigation. Data error -> it steps aside for

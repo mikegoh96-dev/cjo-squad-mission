@@ -117,8 +117,8 @@ export function SplashScreen() {
     const observer = new MutationObserver(check);
     observer.observe(document.body, { childList: true, subtree: true });
     const fonts = document.fonts?.ready ?? Promise.resolve();
-    // Fonts never hold the app back for long.
-    Promise.race([fonts, new Promise((r) => timers.push(window.setTimeout(r, 1500)))]).then(() => {
+    // Fonts get at most 0.5 s: they swap in cleanly anyway (font-display: swap).
+    Promise.race([fonts, new Promise((r) => timers.push(window.setTimeout(r, 500)))]).then(() => {
       fontsReady = true;
       check();
     });
