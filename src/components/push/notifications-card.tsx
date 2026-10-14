@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { disablePush, enablePush } from "@/app/(dashboard)/push-actions";
 import { linkDevice, saveDevicePrefs } from "@/app/(dashboard)/squad-actions";
 import { Bell3D } from "@/components/art/objects";
-import { BellIcon, ChevronDownIcon, GearIcon, ShareIcon } from "@/components/icons";
+import { BellIcon, GearIcon, ShareIcon } from "@/components/icons";
 import { Decor } from "@/components/ui";
 import { getMe, setMe, useMe } from "@/lib/me";
 import { type DevicePrefs, type DeviceSettings, fetchDeviceSettings } from "@/lib/notify-client";
@@ -23,13 +24,18 @@ const serverSupport = (): PushSupport => "unsupported";
  * which ones. iPhone: only apps added to the Home Screen can get
  * notifications, so it shows how to install first. The phone is anonymous
  * unless someone picks "Which card is yours?" (routing only, not identity).
+ *
+ * place="squad": only the "Turn on" prompt (plus a short confirmation right
+ * after turning on). place="settings": status, Turn off and the alert toggles.
  */
 export function NotificationsCard({
   vapidPublicKey,
   memberNames,
+  place,
 }: {
   vapidPublicKey: string | null;
   memberNames: Record<string, string>;
+  place: "squad" | "settings";
 }) {
   const support = useSyncExternalStore(noSubscribe, pushSupport, serverSupport);
   const [view, setView] = useState<View>("checking");
@@ -37,6 +43,7 @@ export function NotificationsCard({
   // null = not loaded or the V2 settings aren't available (then hidden).
   const [settings, setSettings] = useState<DeviceSettings | null>(null);
   const me = useMe();
+  const [justEnabled, setJustEnabled] = useState(false);
   const endpoint = view === "on" ? (subscription?.endpoint ?? null) : null;
 
   // Load this phone's settings once notifications are on.
@@ -116,6 +123,7 @@ export function NotificationsCard({
         return setView("error");
       }
       setSubscription(sub);
+      setJustEnabled(true);
       setView("on");
     } catch {
       setView("error");
@@ -137,59 +145,64 @@ export function NotificationsCard({
   if (support === "ios-install") return <InstallSteps />;
   if (view === "checking" || view === "hidden") return null;
 
+  if (view === "on" && place === "squad") {
+    // Notifications are managed on the Settings tab; just confirm a fresh opt-in.
+    if (!justEnabled) return null;
+    return (
+      <div data-testid="push-card" data-state="on" className="flex items-center gap-3 rounded-tile bg-surface px-4 py-3 shadow-tile">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-good-soft text-good-text">
+          <BellIcon className="size-[18px]" />
+        </span>
+        <p className="min-w-0 flex-1 text-[14px] font-semibold">
+          Notifications on
+          <span className="block text-[12px] font-medium text-muted">Choose which alerts you get in Settings</span>
+        </p>
+        <Link href="/settings" className="flex min-h-11 shrink-0 items-center gap-1 px-2 text-[13px] font-bold text-accent-strong">
+          <GearIcon className="size-4" />
+          Settings
+        </Link>
+      </div>
+    );
+  }
+
   if (view === "on") {
     return (
-      <>
-        <div data-testid="push-card" data-state="on" className="rounded-tile bg-surface px-4 py-3 shadow-tile">
-          <div className="flex items-center gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-good-soft text-good-text">
-              <BellIcon className="size-[18px]" />
-            </span>
-            <p className="min-w-0 flex-1 text-[14px] font-semibold">
+      <section data-testid="push-card" data-state="on" aria-labelledby="alerts-title" className="rounded-card bg-surface p-5 shadow-card">
+        <div className="flex items-center gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-good-soft text-good-text">
+            <BellIcon className="size-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 id="alerts-title" className="text-[17px] leading-snug font-extrabold">
               Notifications on
-              <span className="block text-[12px] font-medium text-muted">Quiet {QUIET_HOURS_LABEL}: alerts wait until morning</span>
-            </p>
-            <button type="button" onClick={turnOff} className="min-h-11 shrink-0 px-2 text-[13px] font-bold text-muted underline-offset-2 hover:underline">
-              Turn off
-            </button>
+            </h2>
+            <p className="text-[12px] font-medium text-muted">On this phone · quiet {QUIET_HOURS_LABEL}</p>
           </div>
+          <button type="button" onClick={turnOff} className="min-h-11 shrink-0 px-2 text-[13px] font-bold text-muted underline-offset-2 hover:underline">
+            Turn off
+          </button>
         </div>
         {settings ? (
-          <section data-testid="settings-card" aria-labelledby="settings-title" className="rounded-card bg-surface p-5 shadow-card">
-            <h2 id="settings-title" className="flex items-center gap-2 text-[17px] font-extrabold">
-              <GearIcon className="size-5 text-accent" />
-              Settings
-            </h2>
-            <details className="group mt-3 rounded-tile bg-background/60 px-4" data-testid="push-settings">
-              <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 [&::-webkit-details-marker]:hidden">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-strong">
-                  <BellIcon className="size-[18px]" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[15px] font-bold">Notification alerts</span>
-                  <span className="block text-[12px] font-medium text-muted">
-                    {Object.values(settings.prefs).filter(Boolean).length} of 4 on · quiet {QUIET_HOURS_LABEL}
-                  </span>
-                </span>
-                <ChevronDownIcon className="size-4 shrink-0 text-muted transition-transform group-open:rotate-180" />
-              </summary>
-              <ul className="space-y-1 border-t border-hairline pt-1 pb-2">
-                <Toggle label="Squad activity" hint="New cases, grouped into one alert" checked={settings.prefs.activity} onChange={(v) => changePref("activity", v)} />
-                <Toggle label="Milestones & rally" hint="Halfway, almost there, target hit" checked={settings.prefs.milestones} onChange={(v) => changePref("milestones", v)} />
-                <Toggle
-                  label="My check-in reminders"
-                  hint={me && memberNames[me] ? `Only to this phone, for ${memberNames[me]}` : "Pick your card in Check-in first"}
-                  checked={settings.prefs.reminders && Boolean(me)}
-                  disabled={!me}
-                  onChange={(v) => changePref("reminders", v)}
-                />
-                <Toggle label="Weekly recap" hint={RECAP_LABEL} checked={settings.prefs.recap} onChange={(v) => changePref("recap", v)} />
-              </ul>
-              <p className="pb-3 text-[12px] font-medium text-muted">Alerts wait until 8am during quiet hours ({QUIET_HOURS_LABEL}, Singapore time).</p>
-            </details>
-          </section>
+          <div data-testid="push-settings" className="mt-4 border-t border-hairline pt-2">
+            <p className="pt-1 text-[12px] font-bold tracking-wide text-muted uppercase">Send me</p>
+            <ul className="mt-1 space-y-1">
+              <Toggle label="Squad activity" hint="New cases, grouped into one alert" checked={settings.prefs.activity} onChange={(v) => changePref("activity", v)} />
+              <Toggle label="Milestones & rally" hint="Halfway, almost there, target hit" checked={settings.prefs.milestones} onChange={(v) => changePref("milestones", v)} />
+              <Toggle
+                label="My check-in reminders"
+                hint={me && memberNames[me] ? `Only to this phone, for ${memberNames[me]}` : "Pick your card on the Squad tab first"}
+                checked={settings.prefs.reminders && Boolean(me)}
+                disabled={!me}
+                onChange={(v) => changePref("reminders", v)}
+              />
+              <Toggle label="Weekly recap" hint={RECAP_LABEL} checked={settings.prefs.recap} onChange={(v) => changePref("recap", v)} />
+            </ul>
+            <p className="mt-2 text-[12px] font-medium text-muted">
+              During quiet hours ({QUIET_HOURS_LABEL}, Singapore time) alerts wait until 8am.
+            </p>
+          </div>
         ) : null}
-      </>
+      </section>
     );
   }
 

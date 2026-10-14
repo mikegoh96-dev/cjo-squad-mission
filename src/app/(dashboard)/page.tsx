@@ -77,6 +77,7 @@ export default async function DashboardPage() {
         />
         <CheerPanel />
         <NotificationsCard
+          place="squad"
           vapidPublicKey={vapidPublicKey}
           memberNames={Object.fromEntries(progress.contributions.map((c) => [c.squadMemberId, c.displayName]))}
         />

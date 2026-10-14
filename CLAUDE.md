@@ -41,7 +41,8 @@ scope.
 
 One shared URL for the whole squad. No accounts, no sign-in anywhere.
 
-- **Dashboard `/`** and **Mission `/mission`**: read-only squad progress.
+- **Dashboard `/`**, **Mission `/mission`** and **Settings `/settings`**
+  (this phone's notification settings): read-only squad progress.
   Data: `src/lib/data/dashboard.ts` -> pure maths in `src/lib/progress.ts` and
   `src/lib/mission.ts`. Contributions are listed alphabetically, never ranked.
 - **Updating happens on the dashboard**: every member has a big card with this
@@ -99,9 +100,12 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
     gets alerts too. If the V2 functions are missing (`PGRST202`), the legacy
     direct send (`notifyCasesAdded`, `message.ts`, `deliver.ts`) runs instead.
   - **Opt-in** stays as before (`notifications-card.tsx`, `register_push_device`,
-    welcome push). When on, a separate **Settings** card (menu row
-    "Notification alerts", in `notifications-card.tsx`) toggles four categories
-    (`set_push_device_prefs`) and shows the quiet hours. `public/sw.js` shows
+    welcome push). The Squad page shows only the "Turn on" prompt (and a short
+    confirmation linking to Settings right after opting in). The **Settings**
+    tab (`/settings`, `src/app/(dashboard)/settings/page.tsx`; bottom nav
+    Squad · Mission · Settings) holds `NotificationsCard place="settings"`:
+    status, Turn off and four category toggles (`set_push_device_prefs`), plus
+    a "How squad alerts work" card. `public/sw.js` shows
     `{title, body, tag, url}` and opens the url (milestones/rally/recap
     `/mission`, reminders `/?checkin=1`).
   - **Check-in** (`src/components/checkin/checkin-card.tsx`, `member_checkins`):
@@ -152,7 +156,7 @@ routing only; a phone link is never proof of who holds it). Mitigations:
   seen and corrected by an admin. If the link leaks outside the squad, treat it
   like any shared document link.
 
-The `(dashboard)` route group holds `/` and `/mission` with their
+The `(dashboard)` route group holds `/`, `/mission` and `/settings` with their
 `loading.tsx` and `error.tsx` (retry without reload).
 
 | File | Use |
@@ -194,7 +198,7 @@ depth (`--shadow-card`, `--shadow-tile`: inner top highlight + thick bottom
 `animate-float`, `animate-unlock`, `.shine`, number pop, +1 float, burst,
 card glow, confetti). Everything decorative is off under
 `prefers-reduced-motion`. Plus Jakarta Sans, bold numbers, blue -> violet brand
-gradient (`bg-brand`), bottom navigation (Squad · Mission). Status is always
+gradient (`bg-brand`), bottom navigation (Squad · Mission · Settings). Status is always
 icon + label; green = complete only.
 
 **Corners:** one radius scale only: `rounded-card` (28px: page cards, hero,
