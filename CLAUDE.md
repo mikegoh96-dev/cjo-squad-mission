@@ -260,7 +260,7 @@ Copy `.env.example` to `.env.local` (git-ignored).
 - Apply to the hosted project: `npx supabase login`, `npx supabase link
   --project-ref <ref>`, then `npx supabase db push`.
 - Hosted project `tdmpukylkqgibfddedxi` (ap-southeast-1, Postgres 17): all
-  eight migrations are applied and recorded in
+  nine migrations are applied and recorded in
   `supabase_migrations.schema_migrations` (the last two,
   `member_weekly_momentum` and `realtime_case_counts`, via the SQL editor on
   2026-10-03; Realtime confirmed "Live" on phones). Without
@@ -269,10 +269,12 @@ Copy `.env.example` to `.env.local` (git-ignored).
   `20261007090000_push_notifications` (push devices) is applied too (SQL
   editor, 2026-10-07) with one row in `private.push_settings` holding
   `sha256(PUSH_SECRET)`. Push also needs the three push env vars in Vercel;
-  without them the card stays hidden. `20261014090000_notifications_v2` needs
-  applying (SQL editor) plus the Supabase Cron job (pg_cron + pg_net, every
-  minute, `CRON_SECRET` in Vault) and `CRON_SECRET` in Vercel; until the
-  migration is applied the app keeps the legacy direct alerts. Rotating `PUSH_SECRET` means updating
+  without them the card stays hidden. `20261014090000_notifications_v2` is
+  applied too (SQL editor, 2026-10-14), with the Supabase Cron job
+  `cjo-notify-every-minute` (pg_cron + pg_net, secret `cjo_cron_secret` in
+  Vault) and the same `CRON_SECRET` in Vercel. Health check: `net._http_response`
+  (scheduler calls, expect 200) and `private.notification_jobs`. Without the
+  migration the app falls back to the legacy direct alerts. Rotating `PUSH_SECRET` means updating
   that row (`update private.push_settings set secret_hash = sha256(...)`).
 - Types were last generated with `@supabase/postgres-meta` against the migrated
   local database (`PG_META_GENERATE_TYPES_DETECT_ONE_TO_ONE_RELATIONSHIPS=true`,
