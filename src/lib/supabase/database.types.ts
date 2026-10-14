@@ -155,6 +155,52 @@ export type Database = {
           },
         ]
       }
+      member_checkins: {
+        Row: {
+          campaign_id: string
+          confirmed_at: string
+          confirmed_count: number
+          month: string
+          squad_member_id: string
+        }
+        Insert: {
+          campaign_id: string
+          confirmed_at?: string
+          confirmed_count: number
+          month: string
+          squad_member_id: string
+        }
+        Update: {
+          campaign_id?: string
+          confirmed_at?: string
+          confirmed_count?: number
+          month?: string
+          squad_member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_checkins_squad_member_id_fkey"
+            columns: ["squad_member_id"]
+            isOneToOne: false
+            referencedRelation: "squad_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_checkins_target_fk"
+            columns: ["campaign_id", "month"]
+            isOneToOne: false
+            referencedRelation: "monthly_targets"
+            referencedColumns: ["campaign_id", "month"]
+          },
+          {
+            foreignKeyName: "member_checkins_target_fk"
+            columns: ["campaign_id", "month"]
+            isOneToOne: false
+            referencedRelation: "squad_monthly_progress"
+            referencedColumns: ["campaign_id", "month"]
+          },
+        ]
+      }
       members: {
         Row: {
           created_at: string
@@ -209,7 +255,13 @@ export type Database = {
           endpoint: string
           id: string
           last_seen_at: string
+          linked_at: string | null
           p256dh: string
+          pref_activity: boolean
+          pref_milestones: boolean
+          pref_recap: boolean
+          pref_reminders: boolean
+          squad_member_id: string | null
         }
         Insert: {
           auth: string
@@ -217,7 +269,13 @@ export type Database = {
           endpoint: string
           id?: string
           last_seen_at?: string
+          linked_at?: string | null
           p256dh: string
+          pref_activity?: boolean
+          pref_milestones?: boolean
+          pref_recap?: boolean
+          pref_reminders?: boolean
+          squad_member_id?: string | null
         }
         Update: {
           auth?: string
@@ -225,9 +283,59 @@ export type Database = {
           endpoint?: string
           id?: string
           last_seen_at?: string
+          linked_at?: string | null
           p256dh?: string
+          pref_activity?: boolean
+          pref_milestones?: boolean
+          pref_recap?: boolean
+          pref_reminders?: boolean
+          squad_member_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_squad_member_id_fkey"
+            columns: ["squad_member_id"]
+            isOneToOne: false
+            referencedRelation: "squad_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      squad_cheers: {
+        Row: {
+          cheer: string
+          created_at: string
+          id: number
+          squad_id: string
+        }
+        Insert: {
+          cheer: string
+          created_at?: string
+          id?: never
+          squad_id: string
+        }
+        Update: {
+          cheer?: string
+          created_at?: string
+          id?: never
+          squad_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "squad_cheers_squad_id_fkey"
+            columns: ["squad_id"]
+            isOneToOne: false
+            referencedRelation: "squad_monthly_progress"
+            referencedColumns: ["squad_id"]
+          },
+          {
+            foreignKeyName: "squad_cheers_squad_id_fkey"
+            columns: ["squad_id"]
+            isOneToOne: false
+            referencedRelation: "squads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       squad_members: {
         Row: {
@@ -313,9 +421,37 @@ export type Database = {
       }
     }
     Functions: {
+      confirm_checkin: {
+        Args: { p_case_count: number; p_squad_member_id: string }
+        Returns: {
+          case_count: number
+          confirmed_at: string
+          month: string
+          status: string
+        }[]
+      }
       forget_push_devices: {
         Args: { p_endpoints: string[]; p_secret: string }
         Returns: number
+      }
+      get_checkin: {
+        Args: { p_squad_member_id: string }
+        Returns: {
+          confirmed: boolean
+          confirmed_at: string
+          confirmed_count: number
+          month: string
+        }[]
+      }
+      get_push_device_settings: {
+        Args: { p_endpoint: string }
+        Returns: {
+          activity: boolean
+          milestones: boolean
+          recap: boolean
+          reminders: boolean
+          squad_member_id: string
+        }[]
       }
       member_recent_updates: {
         Args: { p_limit?: number; p_squad_member_id: string }
@@ -326,6 +462,26 @@ export type Database = {
           old_count: number
         }[]
       }
+      notify_claim: {
+        Args: { p_limit?: number; p_secret: string }
+        Returns: {
+          claim_token: string
+          job_id: number
+          kind: string
+          payload: Json
+          recipients: Json
+        }[]
+      }
+      notify_complete: {
+        Args: {
+          p_claim_token: string
+          p_job_id: number
+          p_results: Json
+          p_secret: string
+        }
+        Returns: string
+      }
+      notify_plan: { Args: { p_secret: string }; Returns: Json }
       push_devices: {
         Args: { p_secret: string }
         Returns: {
@@ -336,6 +492,27 @@ export type Database = {
       }
       register_push_device: {
         Args: { p_auth: string; p_endpoint: string; p_p256dh: string }
+        Returns: undefined
+      }
+      send_cheer: {
+        Args: { p_cheer: string; p_client: string }
+        Returns: {
+          id: number
+          status: string
+        }[]
+      }
+      set_push_device_member: {
+        Args: { p_endpoint: string; p_squad_member_id: string }
+        Returns: undefined
+      }
+      set_push_device_prefs: {
+        Args: {
+          p_activity: boolean
+          p_endpoint: string
+          p_milestones: boolean
+          p_recap: boolean
+          p_reminders: boolean
+        }
         Returns: undefined
       }
       squad_member_momentum: {
@@ -503,3 +680,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+

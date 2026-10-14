@@ -27,11 +27,3 @@ export function vapidKeyBytes(base64Url: string): Uint8Array<ArrayBuffer> {
   for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
   return bytes;
 }
-
-// This phone's own subscription endpoint: sent with saves so the server does
-// not notify the phone that made the change.
-let ownEndpoint: string | null = null;
-export const setOwnPushEndpoint = (endpoint: string | null) => {
-  ownEndpoint = endpoint;
-};
-export const getOwnPushEndpoint = () => ownEndpoint;

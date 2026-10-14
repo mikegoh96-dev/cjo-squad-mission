@@ -10,7 +10,8 @@ select tables_are(
   'public',
   array[
     'members', 'squads', 'squad_members', 'campaigns', 'monthly_targets',
-    'member_case_counts', 'case_update_history', 'push_subscriptions'
+    'member_case_counts', 'case_update_history', 'push_subscriptions',
+    'member_checkins', 'squad_cheers'
   ],
   'public schema contains exactly the application tables'
 );
@@ -110,8 +111,8 @@ select ok(not has_function_privilege('anon', 'private.current_campaign_month()',
 select is(
   (select array_agg(tablename::text order by tablename::text) from pg_publication_tables
     where pubname = 'supabase_realtime' and schemaname = 'public'),
-  array['member_case_counts', 'squad_members'],
-  'case counts and squad membership are broadcast for real-time sync (and nothing else)'
+  array['member_case_counts', 'squad_cheers', 'squad_members'],
+  'case counts, squad membership and cheers are broadcast for real-time sync (and nothing else)'
 );
 
 -- ---------------------------------------------------------------------------

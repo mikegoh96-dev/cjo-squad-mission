@@ -5,9 +5,10 @@ import { getSupabaseEnv } from "./env";
 let client: SupabaseClient<Database> | null = null;
 
 /**
- * Browser Supabase client, used ONLY for Realtime (live updates). Publishable
- * key, no session: it can receive what the anon role may read, nothing more.
- * All reads and writes still go through the server.
+ * Browser Supabase client: Realtime (live updates) plus a few small anon
+ * reads (recent cheers, this phone's check-in and alert settings) that must
+ * not queue behind card saves. Publishable key, no session: it can do only
+ * what the anon role may do. All writes go through the server.
  */
 export function getBrowserClient(): SupabaseClient<Database> {
   if (!client) {

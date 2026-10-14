@@ -30,9 +30,12 @@ featured); collective progress; team momentum (net cases today / this week, plus
 member's net this week listed A–Z, never ranked);
 monthly milestones (first case, 50%, 75%, target) with a short celebration;
 one big card per member (A–Z) on the dashboard with -/+ to update their
-count for the open month. Mobile-first. Push notifications when someone adds
-cases (added 2026-10-07 at the owner's request; see below). Anything else
-(chat, profiles, points, analytics, integrations) is out of scope.
+count for the open month. Mobile-first. Push notifications (added 2026-10-07;
+V2 on 2026-10-14 at the owner's request, see below): consolidated squad
+activity, shared milestones + one rally, private monthly check-in reminders,
+a Monday recap; an in-app cheer panel; a monthly check-in. Anything else
+(chat, profiles, points, analytics, integrations, WhatsApp posting) is out of
+scope.
 
 ## Access model: shared link, no login
 
@@ -59,21 +62,58 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
   (Realtime subscribed) or "Auto-updating" (polling).
   Counts belong to the open month, so every card starts at 0 when a new
   mission month begins. There is no separate update page.
-- **Push notifications** (installable web app + Web Push, no third party):
-  each phone opts in on the dashboard (`src/components/push/notifications-card.tsx`;
-  iPhone must first "Add to Home Screen", iOS 16.4+, and the card shows how).
-  The phone's anonymous push subscription is stored via `register_push_device`
-  (`push-actions.ts`, which also sends a one-off welcome notification). When a
-  save **adds** cases (never on corrections), `saveCaseCount` schedules
-  `notifyCasesAdded` with `after()` (the tap is never slowed): it reads the
-  squad total, builds the message (`src/lib/push/message.ts`: "🎉 Cynthia added
-  2 cases" / milestone headlines, squad progress in the body; the milestone is
-  judged from this member's exact before/after counts so saves landing together
-  never skip or repeat one) and sends it to
-  every opted-in device except the phone that tapped (`deliver.ts`; devices
-  answering 404/410 are dropped). Service worker `public/sw.js` shows it (tag
-  per member, so a newer update replaces the older one) and opens the app on
-  tap. Open dashboards also show an in-app pop-up for a teammate's adds.
+- **Push notifications V2** (installable web app + Web Push, no third party).
+  The DATABASE decides what is sent, when and to whom; the app only renders
+  and delivers. Migration `20261014090000_notifications_v2.sql`:
+  - **Outbox** `private.notification_jobs` (unique `dedupe_key` per logical
+    notification, priority 1 = milestone, `scheduled_for`, attempts, lease) and
+    `private.notification_deliveries` (one row per phone per job; push host
+    only, never the endpoint). Policy in ONE row: `private.notify_policy`
+    (quiet hours 22:00–08:00 Asia/Singapore, 60 s window, rally 90%, reminder
+    72 h / +7 d / cap 3, recap Mon 09:00, retries 5, cheers limits).
+  - **Planner** `notify_plan(secret)` (advisory-locked): committed history rows
+    become activity batches once the window since the first update has passed
+    (never during quiet hours, so overnight = one morning alert). Each history
+    row belongs to exactly one batch (`notification_activity_items`, a row-id
+    set, not a cursor). Milestones (first case, 50%, 75%, target) + rally (90%)
+    are recorded once per month in `notification_milestones` from authoritative
+    totals; one batch crossing several sends only the highest milestone (rally
+    suppressed); thresholds already met before a batch (lowered target) are
+    recorded silently. Reminders: one slot at a time in `checkin_reminders`
+    (PK + `seq between 1 and 3`), only to phones linked to that member, from
+    `reminders_from` (2026-11-01), never planned into the next month. Recap:
+    previous Mon–Sun net change from history + milestones; empty or >24 h late
+    = cancelled.
+  - **Claim / complete** `notify_claim(secret, n)` (`for update skip locked`,
+    re-checks staleness, confirmation, rally coverage, recipients by category
+    preference; nothing during quiet hours) and `notify_complete(...)`
+    (accepted / gone 404-410 = device removed / retry 429-5xx-network with
+    backoff 1, 5, 15, 60 min and never into quiet hours / rejected = not
+    retried). A late report from an expired claim is ignored.
+  - **Sender**: `/api/notify/run` (Bearer `CRON_SECRET`, timing-safe; closed if
+    unset) -> `runNotifications()` in `src/lib/push/server.ts` -> `runJobs` +
+    wording `renderJob` + `classifyPushError` in `src/lib/push/jobs.ts`
+    (unit-tested; contributors named A–Z, never their totals). Called every
+    minute by **Supabase Cron** (pg_cron + pg_net; secret in Vault) and after
+    each adding save (`notifyAfterSave` via `after()`). The phone that tapped
+    gets alerts too. If the V2 functions are missing (`PGRST202`), the legacy
+    direct send (`notifyCasesAdded`, `message.ts`, `deliver.ts`) runs instead.
+  - **Opt-in** stays as before (`notifications-card.tsx`, `register_push_device`,
+    welcome push). When on, "Choose your alerts" toggles four categories
+    (`set_push_device_prefs`) and shows the quiet hours. `public/sw.js` shows
+    `{title, body, tag, url}` and opens the url (milestones/rally/recap
+    `/mission`, reminders `/?checkin=1`).
+  - **Check-in** (`src/components/checkin/checkin-card.tsx`, `member_checkins`):
+    "Which card is yours?" is remembered on the phone (`src/lib/me.ts`,
+    localStorage) and synced to the phone's subscription
+    (`set_push_device_member`) for reminder routing; it is NOT identity. Only
+    that member's card shows "You" and the Check in control ("Confirm 0 cases"
+    works); `confirm_checkin` must match the stored count and cancels queued
+    reminders. There is no list of who has or hasn't checked in.
+  - **Cheers** (`src/components/cheers/cheer-panel.tsx`, `send_cheer`,
+    `public.squad_cheers`): 4 presets, anonymous (no member/device stored),
+    rate-limited (per browser hash + squad-wide), never pushed, kept 2 days,
+    live via Realtime (polling every 8 s as fallback).
   Manifest `src/app/manifest.ts`, icons in `public/` + `src/app/apple-icon.png`.
   Without the push env vars the card is hidden and nothing is sent.
 - **App updates** (Home Screen apps resume old copies and have no reload or
@@ -90,7 +130,8 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
 **Security trade-off (accepted for a trusted internal team tool):** because
 there is no authentication, the system **cannot prove who submitted a count**.
 Anyone with the link can pick any name and change that member's current-month
-total. Mitigations:
+total, confirm that member's check-in, or link a phone to them (reminder
+routing only; a phone link is never proof of who holds it). Mitigations:
 - the only write path is `submit_case_count(member, count, expected)`; no table
   is writable by the browser roles;
 - only existing squad members, only the open month (campaign time zone), only
@@ -129,7 +170,10 @@ The `(dashboard)` route group holds `/` and `/mission` with their
 | `src/components/squad/` | `LiveBoardProvider`, `SquadBoard`, `MemberCard` (-/+, debounced conflict-safe saves, hype animation; the number sizes to the room between the buttons via container units; one column below 360px) |
 | `src/components/live/live-sync.tsx` | Real-time sync (Realtime + polling fallback) and the Live badge |
 | `src/lib/supabase/browser.ts` | Browser client for Realtime only (publishable key) |
-| `src/lib/push/` | `message.ts` (wording), `deliver.ts` (fan-out, prune gone devices), `endpoint.ts` (allowed push hosts) — unit-tested; `server.ts` (server-only: config, web-push, `notifyCasesAdded`, `sendWelcome`); `client.ts` (support check, SW registration, this phone's endpoint) |
+| `src/lib/push/` | `jobs.ts` (V2 wording, error classes, runner), `message.ts` + `deliver.ts` (legacy direct send), `endpoint.ts` (allowed push hosts) — unit-tested; `server.ts` (server-only: config, web-push, `runNotifications`, `notifyAfterSave`, legacy `notifyCasesAdded`, `sendWelcome`); `client.ts` (support check, SW registration, VAPID key); `policy.ts` (quiet-hours label for the UI) |
+| `src/app/api/notify/run/route.ts` | Scheduler endpoint (Bearer `CRON_SECRET`) |
+| `src/app/(dashboard)/squad-actions.ts` | Check-in, phone link/preferences, cheers (Server Actions) |
+| `src/lib/me.ts`, `src/lib/cheers.ts` | This phone's member (localStorage store); cheer keys |
 | `src/lib/app-version.ts`, `src/components/app-update.tsx`, `src/app/api/version/route.ts` | Self-update for Home Screen apps (see "App updates") |
 | `src/components/` | `ui.tsx` (Card, Meter, Ring, Avatar), icons, `app-shell`, `nav/bottom-nav`, `mission/*` |
 | `scripts/members.mjs` | Admin CLI: list / add / rename / remove members |
@@ -198,7 +242,8 @@ Copy `.env.example` to `.env.local` (git-ignored).
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | App (local + Vercel Production/Preview) |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Push: public VAPID key (Vercel Production/Preview) |
 | `VAPID_PRIVATE_KEY` | Push: signs messages. Server only (Vercel), never `NEXT_PUBLIC_`, never committed |
-| `PUSH_SECRET` | Push: lets the server list devices (`push_devices`); its SHA-256 is in `private.push_settings`. Server only, never committed |
+| `PUSH_SECRET` | Push: lets the server list devices and plan/claim/complete jobs; its SHA-256 is in `private.push_settings`. Server only, never committed |
+| `CRON_SECRET` | Scheduler: Supabase Cron sends it as `Authorization: Bearer …` to `/api/notify/run`; the same value lives in Supabase Vault (`cjo_cron_secret`). Server only, 32+ chars, never committed |
 | `VAPID_SUBJECT` | Optional contact URL for push services (defaults to the Vercel production URL) |
 | `SUPABASE_SECRET_KEY` | Admin CLI only, on an admin's machine |
 
@@ -223,7 +268,10 @@ Copy `.env.example` to `.env.local` (git-ignored).
   `20261007090000_push_notifications` (push devices) is applied too (SQL
   editor, 2026-10-07) with one row in `private.push_settings` holding
   `sha256(PUSH_SECRET)`. Push also needs the three push env vars in Vercel;
-  without them the card stays hidden. Rotating `PUSH_SECRET` means updating
+  without them the card stays hidden. `20261014090000_notifications_v2` needs
+  applying (SQL editor) plus the Supabase Cron job (pg_cron + pg_net, every
+  minute, `CRON_SECRET` in Vault) and `CRON_SECRET` in Vercel; until the
+  migration is applied the app keeps the legacy direct alerts. Rotating `PUSH_SECRET` means updating
   that row (`update private.push_settings set secret_hash = sha256(...)`).
 - Types were last generated with `@supabase/postgres-meta` against the migrated
   local database (`PG_META_GENERATE_TYPES_DETECT_ONE_TO_ONE_RELATIONSHIPS=true`,
@@ -238,7 +286,13 @@ month), `member_case_counts` (a member's **current** monthly total, integer
 0–1000), `case_update_history` (append-only audit, written by trigger;
 `changed_by` null: shared-link submitters are unknown), `push_subscriptions`
 (anonymous opted-in devices: endpoint + keys; private, function access only;
-endpoints must be a known browser push service).
+endpoints must be a known browser push service; optional `squad_member_id`
+link + four `pref_*` flags), `member_checkins` (private; confirmed count per
+member per month, zero allowed), `squad_cheers` (public-read for 1 day,
+written only by `send_cheer`). Notification internals live in `private`
+(`notify_policy`, `notification_jobs`, `notification_deliveries`,
+`notification_activity_items`, `notification_milestones`, `checkin_reminders`,
+`cheer_log`).
 
 The squad total is **derived**, never stored (`squad_monthly_progress` view /
 `computeSquadProgress`). Campaign targets are data (`monthly_targets`; seeded
@@ -249,7 +303,7 @@ The open month is resolved in the campaign's `time_zone`.
 
 | Role | Can | Cannot |
 | --- | --- | --- |
-| anon / authenticated | SELECT members, squads, squad_members, campaigns, monthly_targets, member_case_counts, squad_monthly_progress; call `submit_case_count(member, count, expected)`, `squad_momentum(squad)`, `squad_member_momentum(squad)`, `member_recent_updates(member, limit)` (currently unused by the UI), `register_push_device` / `unregister_push_device` | INSERT/UPDATE/DELETE any table; read raw `case_update_history`; list push devices (`push_devices` / `forget_push_devices` need `PUSH_SECRET`) |
+| anon / authenticated | SELECT members, squads, squad_members, campaigns, monthly_targets, member_case_counts, squad_monthly_progress; call `submit_case_count(member, count, expected)`, `squad_momentum(squad)`, `squad_member_momentum(squad)`, `member_recent_updates(member, limit)` (currently unused by the UI), `register_push_device` / `unregister_push_device`, `get_push_device_settings` / `set_push_device_member` / `set_push_device_prefs` (by endpoint), `confirm_checkin` / `get_checkin` (one member), `send_cheer`; SELECT recent `squad_cheers` | INSERT/UPDATE/DELETE any table; read raw `case_update_history` or `member_checkins`; list push devices or touch the outbox (`push_devices`, `forget_push_devices`, `notify_plan`, `notify_claim`, `notify_complete` need `PUSH_SECRET`) |
 | service_role (admin CLI) | manage squads, members and counts | — |
 
 The functions are `security definer` with `search_path = ''`; private helpers

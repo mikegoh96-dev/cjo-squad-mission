@@ -2,6 +2,8 @@ import { connection } from "next/server";
 import { AppShell } from "@/components/app-shell";
 import { Rocket3D } from "@/components/art/objects";
 import { UsersIcon } from "@/components/icons";
+import { CheerPanel } from "@/components/cheers/cheer-panel";
+import { CheckinCard } from "@/components/checkin/checkin-card";
 import { Celebration } from "@/components/mission/celebration";
 import { LiveDot } from "@/components/live/live-sync";
 import { MissionHero } from "@/components/mission/mission-hero";
@@ -70,7 +72,15 @@ export default async function DashboardPage() {
                 : null
           }
         />
-        <NotificationsCard vapidPublicKey={vapidPublicKey} />
+        <CheckinCard
+          members={progress.contributions.map((c) => ({ id: c.squadMemberId, name: c.displayName, initials: c.initials }))}
+          monthLabel={focus.label}
+        />
+        <CheerPanel />
+        <NotificationsCard
+          vapidPublicKey={vapidPublicKey}
+          memberNames={Object.fromEntries(progress.contributions.map((c) => [c.squadMemberId, c.displayName]))}
+        />
         <MomentumCard
           today={momentum.today}
           thisWeek={momentum.thisWeek}

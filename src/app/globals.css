@@ -266,6 +266,17 @@ body::before {
   60% { transform: scale(1.12) rotate(3deg); opacity: 1; }
   100% { transform: scale(1) rotate(0); }
 }
+@keyframes cheer-rise {
+  0% { opacity: 0; transform: translateY(14px) scale(0.85); }
+  12% { opacity: 1; transform: translateY(0) scale(1.04); }
+  20% { transform: translateY(-2px) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-46px) scale(0.96); }
+}
+@keyframes cheer-fade {
+  0%, 100% { opacity: 0; }
+  10%, 85% { opacity: 1; }
+}
 @keyframes soft-pulse {
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 45%, transparent); }
   50% { box-shadow: 0 0 0 6px color-mix(in oklab, var(--accent) 0%, transparent); }
@@ -294,6 +305,7 @@ body::before {
 }
 .animate-confetti { animation: confetti 2.6s cubic-bezier(0.25, 0.6, 0.4, 1) both; }
 .animate-toast { animation: toast-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.animate-cheer-rise { animation: cheer-rise 2.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-rise, .animate-meter, .animate-pop, .animate-shimmer, .animate-soft-pulse, .animate-toast {
@@ -303,5 +315,7 @@ body::before {
   .animate-confetti, .animate-float-up, .animate-burst, .animate-card-glow, .animate-ping-soft { display: none; }
   .animate-number-pop, .animate-float, .animate-unlock { animation: none !important; }
   .shine-sweep { display: none; }
+  /* Cheers still appear, without movement. */
+  .animate-cheer-rise { animation: cheer-fade 2.6s linear both !important; }
   *, *::before, *::after { transition-duration: 0.01ms !important; }
 }

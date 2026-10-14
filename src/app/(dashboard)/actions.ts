@@ -4,8 +4,7 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { submitCaseCount } from "@/lib/data/case-updates";
 import { isUuid } from "@/lib/ids";
-import { isPushEndpoint } from "@/lib/push/endpoint";
-import { notifyCasesAdded } from "@/lib/push/server";
+import { notifyAfterSave } from "@/lib/push/server";
 import { parseCaseCount } from "@/lib/validation/case-count";
 
 export type SaveResult =
@@ -18,13 +17,14 @@ export type SaveResult =
  * database cannot verify who is tapping; see CLAUDE.md). `expectedCount` is the
  * last total this screen confirmed; if the stored total changed since, nothing
  * is written and the result is "conflict".
- * When cases were added, every other opted-in phone gets a push notification
- * (`deviceEndpoint` = this phone's own subscription, so it is skipped).
+ * When cases were added, the notification outbox is kicked (every opted-in
+ * phone, including this one, gets the consolidated squad alert).
  */
 export async function saveCaseCount(input: {
   squadMemberId: unknown;
   caseCount: unknown;
   expectedCount: unknown;
+  /** No longer used: the phone that tapped gets the squad alert too. */
   deviceEndpoint?: unknown;
 }): Promise<SaveResult> {
   if (!isUuid(input.squadMemberId)) return { status: "error", reason: "unknown-member" };
@@ -44,9 +44,8 @@ export async function saveCaseCount(input: {
   const added = result.status === "saved" ? result.caseCount - result.previousCount : 0;
   if (added > 0) {
     const squadMemberId = input.squadMemberId.toLowerCase();
-    const exceptEndpoint = isPushEndpoint(input.deviceEndpoint) ? input.deviceEndpoint : null;
     const { previousCount, caseCount } = result;
-    after(() => notifyCasesAdded({ squadMemberId, previousCount, caseCount, exceptEndpoint }));
+    after(() => notifyAfterSave({ squadMemberId, previousCount, caseCount }));
   }
   return { status: result.status, caseCount: result.caseCount, previousCount: result.previousCount };
 }

@@ -6,7 +6,7 @@ import { CheckIcon, MinusIcon, PlusIcon, RefreshIcon } from "@/components/icons"
 import { Avatar } from "@/components/ui";
 import { applyTap, cheerFor, rebaseTaps } from "@/lib/board";
 import { setUnsaved } from "@/lib/app-version";
-import { getOwnPushEndpoint } from "@/lib/push/client";
+import { useMe } from "@/lib/me";
 import { useLiveBoard } from "./live-board";
 
 type Status =
@@ -48,6 +48,7 @@ export function MemberCard({
   serverCount: number;
 }) {
   const { editable, setLocal, announce } = useLiveBoard();
+  const isMe = useMe() === id; // this phone's own card (routing choice, not identity)
   const [display, setDisplay] = useState(serverCount);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [fx, setFx] = useState<Fx[]>([]);
@@ -110,7 +111,6 @@ export function MemberCard({
             squadMemberId: id,
             caseCount: displayRef.current,
             expectedCount: confirmed.current,
-            deviceEndpoint: getOwnPushEndpoint(), // this phone is not notified of its own taps
           });
         } catch {
           uncertain.current = true;
@@ -232,6 +232,11 @@ export function MemberCard({
       <div className="flex min-w-0 items-center gap-2">
         <Avatar name={name} id={id} initials={initials} size="md" />
         <h3 className="min-w-0 truncate text-[16px] font-bold">{name}</h3>
+        {isMe ? (
+          <span data-testid="me-chip" className="ml-auto shrink-0 rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-extrabold text-accent-strong">
+            You
+          </span>
+        ) : null}
       </div>
 
       <div className="relative mt-3 flex items-center justify-between gap-1">

@@ -2,10 +2,14 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { disablePush, enablePush } from "@/app/(dashboard)/push-actions";
+import { linkDevice, saveDevicePrefs } from "@/app/(dashboard)/squad-actions";
 import { Bell3D } from "@/components/art/objects";
-import { BellIcon, ShareIcon } from "@/components/icons";
+import { BellIcon, ChevronDownIcon, ShareIcon } from "@/components/icons";
 import { Decor } from "@/components/ui";
-import { type PushSupport, pushSupport, registerServiceWorker, setOwnPushEndpoint, vapidKeyBytes } from "@/lib/push/client";
+import { getMe, setMe, useMe } from "@/lib/me";
+import { type DevicePrefs, type DeviceSettings, fetchDeviceSettings } from "@/lib/notify-client";
+import { type PushSupport, pushSupport, registerServiceWorker, vapidKeyBytes } from "@/lib/push/client";
+import { QUIET_HOURS_LABEL, RECAP_LABEL } from "@/lib/push/policy";
 
 type View = "checking" | "hidden" | "off" | "working" | "on" | "blocked" | "error";
 
@@ -14,14 +18,65 @@ const noSubscribe = () => () => {};
 const serverSupport = (): PushSupport => "unsupported";
 
 /**
- * Opt in to push notifications on this phone ("someone added cases").
- * iPhone: only apps added to the Home Screen can get notifications, so it
- * shows how to install first. Anonymous: the phone is not tied to a member.
+ * Opt in to push notifications on this phone (squad activity, milestones,
+ * weekly recap, and this phone's member's check-in reminders), then choose
+ * which ones. iPhone: only apps added to the Home Screen can get
+ * notifications, so it shows how to install first. The phone is anonymous
+ * unless someone picks "Which card is yours?" (routing only, not identity).
  */
-export function NotificationsCard({ vapidPublicKey }: { vapidPublicKey: string | null }) {
+export function NotificationsCard({
+  vapidPublicKey,
+  memberNames,
+}: {
+  vapidPublicKey: string | null;
+  memberNames: Record<string, string>;
+}) {
   const support = useSyncExternalStore(noSubscribe, pushSupport, serverSupport);
   const [view, setView] = useState<View>("checking");
   const [subscription, setSubscription] = useState<PushSubscription | null>(null);
+  // null = not loaded or the V2 settings aren't available (then hidden).
+  const [settings, setSettings] = useState<DeviceSettings | null>(null);
+  const me = useMe();
+  const endpoint = view === "on" ? (subscription?.endpoint ?? null) : null;
+
+  // Load this phone's settings once notifications are on.
+  useEffect(() => {
+    if (!endpoint) return;
+    let cancelled = false;
+    void fetchDeviceSettings(endpoint).then((found) => {
+      if (cancelled || !found || found === "off") return;
+      // Storage was cleared but the phone was linked before: remember it again.
+      if (found.memberId && getMe() === null) setMe(found.memberId);
+      setSettings(found);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [endpoint]);
+
+  // Keep the server's link (where reminders go) in step with "Which card is yours?".
+  const linked = settings?.memberId ?? null;
+  useEffect(() => {
+    if (!endpoint || !settings || linked === me) return;
+    let cancelled = false;
+    linkDevice(endpoint, me)
+      .catch(() => null)
+      .then((result) => {
+        if (!cancelled && result?.ok) setSettings((s) => (s ? { ...s, memberId: me } : s));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [endpoint, settings, linked, me]);
+
+  async function changePref(key: keyof DevicePrefs, value: boolean) {
+    if (!endpoint || !settings) return;
+    const previous = settings.prefs;
+    const prefs = { ...previous, [key]: value };
+    setSettings({ ...settings, prefs });
+    const result = await saveDevicePrefs(endpoint, prefs).catch(() => null);
+    if (!result?.ok) setSettings((s) => (s ? { ...s, prefs: previous } : s));
+  }
 
   useEffect(() => {
     if (!vapidPublicKey || support !== "supported") return;
@@ -32,7 +87,6 @@ export function NotificationsCard({ vapidPublicKey }: { vapidPublicKey: string |
         if (cancelled) return;
         if (sub && Notification.permission === "granted") {
           setSubscription(sub);
-          setOwnPushEndpoint(sub.endpoint);
           setView("on");
           void enablePush(sub.toJSON(), { welcome: false }); // keep the server's copy fresh
         } else {
@@ -62,7 +116,6 @@ export function NotificationsCard({ vapidPublicKey }: { vapidPublicKey: string |
         return setView("error");
       }
       setSubscription(sub);
-      setOwnPushEndpoint(sub.endpoint);
       setView("on");
     } catch {
       setView("error");
@@ -76,7 +129,7 @@ export function NotificationsCard({ vapidPublicKey }: { vapidPublicKey: string |
     await subscription.unsubscribe().catch(() => {});
     await disablePush(endpoint).catch(() => {});
     setSubscription(null);
-    setOwnPushEndpoint(null);
+    setSettings(null);
     setView("off");
   }
 
@@ -86,21 +139,39 @@ export function NotificationsCard({ vapidPublicKey }: { vapidPublicKey: string |
 
   if (view === "on") {
     return (
-      <div
-        data-testid="push-card"
-        data-state="on"
-        className="flex items-center gap-3 rounded-tile bg-surface px-4 py-3 shadow-tile"
-      >
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-good-soft text-good-text">
-          <BellIcon className="size-[18px]" />
-        </span>
-        <p className="min-w-0 flex-1 text-[14px] font-semibold">
-          Notifications on
-          <span className="block text-[12px] font-medium text-muted">You&apos;ll hear when the squad adds cases</span>
-        </p>
-        <button type="button" onClick={turnOff} className="shrink-0 px-2 py-2 text-[13px] font-bold text-muted underline-offset-2 hover:underline">
-          Turn off
-        </button>
+      <div data-testid="push-card" data-state="on" className="rounded-tile bg-surface px-4 py-3 shadow-tile">
+        <div className="flex items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-good-soft text-good-text">
+            <BellIcon className="size-[18px]" />
+          </span>
+          <p className="min-w-0 flex-1 text-[14px] font-semibold">
+            Notifications on
+            <span className="block text-[12px] font-medium text-muted">Quiet {QUIET_HOURS_LABEL}: alerts wait until morning</span>
+          </p>
+          <button type="button" onClick={turnOff} className="min-h-11 shrink-0 px-2 text-[13px] font-bold text-muted underline-offset-2 hover:underline">
+            Turn off
+          </button>
+        </div>
+        {settings ? (
+          <details className="group mt-2 border-t border-hairline pt-1" data-testid="push-settings">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between text-[14px] font-bold text-accent-strong [&::-webkit-details-marker]:hidden">
+              Choose your alerts
+              <ChevronDownIcon className="size-4 transition-transform group-open:rotate-180" />
+            </summary>
+            <ul className="space-y-1 pb-1">
+              <Toggle label="Squad activity" hint="New cases, grouped into one alert" checked={settings.prefs.activity} onChange={(v) => changePref("activity", v)} />
+              <Toggle label="Milestones & rally" hint="Halfway, almost there, target hit" checked={settings.prefs.milestones} onChange={(v) => changePref("milestones", v)} />
+              <Toggle
+                label="My check-in reminders"
+                hint={me && memberNames[me] ? `Only to this phone, for ${memberNames[me]}` : "Pick your card in Check-in first"}
+                checked={settings.prefs.reminders && Boolean(me)}
+                disabled={!me}
+                onChange={(v) => changePref("reminders", v)}
+              />
+              <Toggle label="Weekly recap" hint={RECAP_LABEL} checked={settings.prefs.recap} onChange={(v) => changePref("recap", v)} />
+            </ul>
+          </details>
+        ) : null}
       </div>
     );
   }
@@ -124,7 +195,7 @@ export function NotificationsCard({ vapidPublicKey }: { vapidPublicKey: string |
           <p className="mt-1 text-[14px] leading-snug text-muted">
             {view === "blocked"
               ? "Notifications are blocked for this app. Allow them in your phone's Settings, then come back."
-              : "A buzz on your phone whenever someone adds a case or the squad hits a milestone."}
+              : `A buzz when the squad adds cases or hits a milestone, plus a Monday recap. Quiet ${QUIET_HOURS_LABEL}.`}
           </p>
         </div>
       </div>
@@ -154,6 +225,46 @@ export function NotificationsCard({ vapidPublicKey }: { vapidPublicKey: string |
         </>
       )}
     </section>
+  );
+}
+
+function Toggle({
+  label,
+  hint,
+  checked,
+  disabled = false,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        disabled={disabled}
+        onClick={() => onChange(!checked)}
+        className="flex min-h-11 w-full items-center gap-3 py-1.5 text-left disabled:opacity-60"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block text-[14px] font-semibold">{label}</span>
+          <span className="block text-[12px] font-medium text-muted">{hint}</span>
+        </span>
+        <span
+          aria-hidden="true"
+          className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${checked ? "bg-brand" : "bg-accent-track"}`}
+        >
+          <span
+            className={`absolute top-0.5 size-6 rounded-full bg-white shadow-tile transition-transform duration-200 ${checked ? "translate-x-[22px]" : "translate-x-0.5"}`}
+          />
+        </span>
+      </button>
+    </li>
   );
 }
 
