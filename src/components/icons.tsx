@@ -78,3 +78,12 @@ export const BellIcon = (p: IconProps) => (
 export const ShareIcon = (p: IconProps) => (
   <Svg {...p}><path d="M12 15V3m0 0L8 7m4-4l4 4M8 10H6.5A1.5 1.5 0 0 0 5 11.5v8A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-8a1.5 1.5 0 0 0-1.5-1.5H16" /></Svg>
 );
+export const PlayIcon = (p: IconProps) => <Svg {...p}><path d="M8 5.5v13l10.5-6.5z" fill="currentColor" /></Svg>;
+export const PauseIcon = (p: IconProps) => <Svg {...p}><path d="M8.5 5.5v13M15.5 5.5v13" strokeWidth={3} /></Svg>;
+export const SkipIcon = (p: IconProps) => <Svg {...p}><path d="M5 6l8 6-8 6zM18 6v12" /></Svg>;
+export const ReplayIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4" /></Svg>
+);
+export const CopyIcon = (p: IconProps) => (
+  <Svg {...p}><rect x="8.5" y="8.5" width="11" height="11" rx="2" /><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5" /></Svg>
+);

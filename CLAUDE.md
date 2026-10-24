@@ -33,7 +33,9 @@ one big card per member (A–Z) on the dashboard with -/+ to update their
 count for the open month. Mobile-first. Push notifications (added 2026-10-07;
 V2 on 2026-10-14 at the owner's request, see below): consolidated squad
 activity, shared milestones + one rally, private monthly check-in reminders,
-a Monday recap; an in-app cheer panel; a monthly check-in. Anything else
+a Monday recap; an in-app cheer panel; a monthly check-in. A Squad Recap
+(added 2026-10-24 at the owner's request, Mission page only; see below).
+Anything else
 (chat, profiles, points, analytics, integrations, WhatsApp posting) is out of
 scope.
 
@@ -134,6 +136,26 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
   "Try again" appears (works without JS); `<noscript>` hides it. Reduced
   motion: fades only. The OS's own launch screen (before the web app starts)
   is separate and not controlled by the app.
+- **Squad Recap** (Mission page only; `src/components/recap/`): the "Squad
+  Recap" card -> "Generate Recap" -> pick Weekly (this week / last week) or
+  Monthly (each campaign month that has started), with the exact period shown
+  -> a ~22 s animated story (opening, squad performance, milestones, thank-you
+  to the whole squad A–Z, next mission) with pause, back/next, skip to summary,
+  close (× / Escape) -> a summary card (Replay, Back to Mission, Share or Copy
+  summary: only what the browser supports). Periods are whole days in the
+  campaign time zone, end exclusive: week = Monday 00:00 -> next Monday 00:00,
+  month = 1st -> next 1st. Maths in `src/lib/recap.ts` (pure, unit-tested):
+  cases = net of the recorded changes inside the period (never the current
+  total), progress = the month total replayed to the period's end, teammates =
+  members whose count rose overall in the period (a count only, no names or
+  numbers per person), milestones = first time each was reached (re-crossing
+  after a correction never counts again; thresholds use the current target).
+  If the recorded history doesn't add up to the stored totals, the recap
+  refuses ("Not enough history") rather than guess. Data: the anon function
+  `squad_recap_history(squad, campaign, until)` (migration
+  `20261024090000_squad_recap.sql`; read from the browser in
+  `src/lib/recap-client.ts`) + `member_case_counts`. Without the function the
+  card says "Recap isn't available yet". Reduced motion: no movement.
 - **App updates** (Home Screen apps resume old copies and have no reload or
   pull-to-refresh): `next.config.ts` stamps each build with `APP_VERSION`
   (Vercel deployment id); `/api/version` returns the live one (no-store).
@@ -192,6 +214,7 @@ The `(dashboard)` route group holds `/`, `/mission` and `/settings` with their
 | `src/app/api/notify/run/route.ts` | Scheduler endpoint (Bearer `CRON_SECRET`) |
 | `src/app/(dashboard)/squad-actions.ts` | Check-in, phone link/preferences, cheers (Server Actions) |
 | `src/lib/me.ts`, `src/lib/cheers.ts` | This phone's member (localStorage store); cheer keys |
+| `src/lib/recap.ts`, `src/lib/recap-client.ts`, `src/components/recap/` | Squad Recap: periods + metrics (unit-tested), browser read, entry card / picker / player / summary |
 | `src/lib/app-version.ts`, `src/components/app-update.tsx`, `src/app/api/version/route.ts` | Self-update for Home Screen apps (see "App updates") |
 | `src/components/` | `ui.tsx` (Card, Meter, Ring, Avatar), icons, `app-shell`, `nav/bottom-nav`, `mission/*` |
 | `scripts/members.mjs` | Admin CLI: list / add / rename / remove members |
@@ -293,6 +316,10 @@ Copy `.env.example` to `.env.local` (git-ignored).
   (scheduler calls, expect 200) and `private.notification_jobs`. Without the
   migration the app falls back to the legacy direct alerts. Rotating `PUSH_SECRET` means updating
   that row (`update private.push_settings set secret_hash = sha256(...)`).
+  `20261024090000_squad_recap` (one read-only function, no table or policy
+  change) is NOT applied to the hosted project yet; until it is, the Recap card
+  reports "Recap isn't available yet". Undo: `drop function
+  public.squad_recap_history(uuid, uuid, timestamptz);`.
 - Types were last generated with `@supabase/postgres-meta` against the migrated
   local database (`PG_META_GENERATE_TYPES_DETECT_ONE_TO_ONE_RELATIONSHIPS=true`,
   `PG_META_POSTGREST_VERSION=14.18`), byte-identical to the hosted generator.
@@ -323,7 +350,7 @@ The open month is resolved in the campaign's `time_zone`.
 
 | Role | Can | Cannot |
 | --- | --- | --- |
-| anon / authenticated | SELECT members, squads, squad_members, campaigns, monthly_targets, member_case_counts, squad_monthly_progress; call `submit_case_count(member, count, expected)`, `squad_momentum(squad)`, `squad_member_momentum(squad)`, `member_recent_updates(member, limit)` (currently unused by the UI), `register_push_device` / `unregister_push_device`, `get_push_device_settings` / `set_push_device_member` / `set_push_device_prefs` (by endpoint), `confirm_checkin` / `get_checkin` (one member), `send_cheer`; SELECT recent `squad_cheers` | INSERT/UPDATE/DELETE any table; read raw `case_update_history` or `member_checkins`; list push devices or touch the outbox (`push_devices`, `forget_push_devices`, `notify_plan`, `notify_claim`, `notify_complete` need `PUSH_SECRET`) |
+| anon / authenticated | SELECT members, squads, squad_members, campaigns, monthly_targets, member_case_counts, squad_monthly_progress; call `submit_case_count(member, count, expected)`, `squad_momentum(squad)`, `squad_member_momentum(squad)`, `member_recent_updates(member, limit)` (currently unused by the UI), `squad_recap_history(squad, campaign, until)` (the squad's recorded changes: time, month, net change, squad member; counts only), `register_push_device` / `unregister_push_device`, `get_push_device_settings` / `set_push_device_member` / `set_push_device_prefs` (by endpoint), `confirm_checkin` / `get_checkin` (one member), `send_cheer`; SELECT recent `squad_cheers` | INSERT/UPDATE/DELETE any table; read raw `case_update_history` or `member_checkins`; list push devices or touch the outbox (`push_devices`, `forget_push_devices`, `notify_plan`, `notify_claim`, `notify_complete` need `PUSH_SECRET`) |
 | service_role (admin CLI) | manage squads, members and counts | — |
 
 The functions are `security definer` with `search_path = ''`; private helpers

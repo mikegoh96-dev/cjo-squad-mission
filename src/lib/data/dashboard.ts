@@ -9,6 +9,8 @@ export type Dashboard =
   | {
       state: "ready";
       campaignName: string;
+      /** The current campaign's calendar (for recaps). */
+      campaign: { id: string; startsOn: string; endsOn: string; timeZone: string };
       squadId: string;
       squadName: string;
       memberCount: number;
@@ -108,6 +110,7 @@ export async function getDashboard(): Promise<Dashboard> {
   return {
     state: "ready",
     campaignName: campaign.name,
+    campaign: { id: campaign.id, startsOn: campaign.startsOn, endsOn: campaign.endsOn, timeZone: campaign.timeZone },
     squadId: squad.id,
     squadName: squad.name,
     memberCount: memberships.length,

@@ -531,6 +531,15 @@ export type Database = {
           today: number
         }[]
       }
+      squad_recap_history: {
+        Args: { p_campaign_id: string; p_squad_id: string; p_until: string }
+        Returns: {
+          changed_at: string
+          delta: number
+          month: string
+          squad_member_id: string
+        }[]
+      }
       submit_case_count: {
         Args: {
           p_case_count: number

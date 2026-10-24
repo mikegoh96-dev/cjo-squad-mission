@@ -1,7 +1,7 @@
 -- Schema, privileges and data-integrity tests. Run with: npx supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(33);
+select plan(34);
 
 -- ---------------------------------------------------------------------------
 -- Tables, RLS and the derived progress view
@@ -92,6 +92,8 @@ select function_privs_are('public', 'squad_momentum', array['uuid'], 'anon', arr
   'anon can read squad momentum');
 select function_privs_are('public', 'member_recent_updates', array['uuid', 'integer'], 'anon', array['EXECUTE'],
   'anon can read a member''s recent updates');
+select function_privs_are('public', 'squad_recap_history', array['uuid', 'uuid', 'timestamp with time zone'], 'anon', array['EXECUTE'],
+  'anon can read the squad''s change history for a recap');
 select is(
   (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'submit_case_count'),

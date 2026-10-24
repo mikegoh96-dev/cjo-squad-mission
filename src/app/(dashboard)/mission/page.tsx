@@ -6,6 +6,7 @@ import { AppShell } from "@/components/app-shell";
 import { Bolt3D, Medal3D, Star3D, Trophy3D } from "@/components/art/objects";
 import { MilestoneBadges } from "@/components/mission/milestone-badges";
 import { MonthCards } from "@/components/mission/month-cards";
+import { SquadRecap } from "@/components/recap/squad-recap";
 import { StatusPill } from "@/components/status-pill";
 import { Card, Decor, Eyebrow, Meter, Ring } from "@/components/ui";
 import { getDashboard } from "@/lib/data/dashboard";
@@ -22,6 +23,33 @@ export default async function MissionPage() {
   const { progress, campaignName } = dashboard;
   const { focus, milestones, overall } = progress;
   const next = nextMilestone(milestones);
+  const recapContext = {
+    squadId: dashboard.squadId,
+    campaign: { ...dashboard.campaign, name: campaignName },
+    targets: progress.months.map((m) => ({ month: m.month, targetCases: m.progress.target })),
+    members: progress.contributions.map((c) => ({ id: c.squadMemberId, name: c.displayName, initials: c.initials })),
+    next:
+      progress.phase === "finished"
+        ? null
+        : {
+            monthLabel: focus.label,
+            total: focus.progress.total,
+            target: focus.progress.target,
+            percent: focus.progress.percent,
+            meterPercent: focus.progress.meterPercent,
+            remaining: focus.progress.remaining,
+            complete: focus.progress.complete,
+            unlock: unlockMessage(focus.progress, next),
+            upcoming: focus.phase === "upcoming",
+          },
+    overall: {
+      total: overall.total,
+      target: overall.target,
+      percent: overall.percent,
+      meterPercent: overall.meterPercent,
+      complete: overall.complete,
+    },
+  };
 
   return (
     <AppShell eyebrow={`${focus.label} mission`} title={ENCOURAGEMENT[focus.status]}>
@@ -67,6 +95,8 @@ export default async function MissionPage() {
           <MilestoneBadges milestones={milestones} />
         </div>
       </section>
+
+      <SquadRecap ctx={recapContext} />
 
       <MonthCards months={progress.months} dayOfMonth={progress.dayOfMonth} title="Monthly totals" />
 
