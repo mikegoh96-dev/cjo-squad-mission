@@ -497,7 +497,15 @@ function weekAchievement(ctx: Ctx, r: WeeklyVideoReport, a: VideoAssets, t: numb
       ctx.fillStyle = d.net > 0 ? brand(ctx, x, base - h, 64, h) : C.track;
       roundRect(ctx, x, base - h, 64, h, Math.min(16, h / 2));
       ctx.fill();
-      if (d.net > 0) withAlpha(ctx, p, () => text(ctx, a, String(d.net), x + 32, base - h - 16, { size: 34, color: C.accentStrong }));
+      // Every day with a change gets its net, corrections included ("−5"), so the bars add up to the headline.
+      if (d.net !== 0) {
+        withAlpha(ctx, p, () =>
+          text(ctx, a, formatDelta(d.net).replace("+", ""), x + 32, base - h - 16, {
+            size: 34,
+            color: d.net > 0 ? C.accentStrong : C.muted,
+          }),
+        );
+      }
     }
     text(ctx, a, d.label, x + 32, base + 50, { size: 30, weight: 700, color: d.future ? "#9aa1bd" : C.muted });
   });
