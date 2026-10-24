@@ -34,7 +34,8 @@ count for the open month. Mobile-first. Push notifications (added 2026-10-07;
 V2 on 2026-10-14 at the owner's request, see below): consolidated squad
 activity, shared milestones + one rally, private monthly check-in reminders,
 a Monday recap; an in-app cheer panel; a monthly check-in. A Squad Recap
-(added 2026-10-24 at the owner's request, Mission page only; see below).
+and a downloadable monthly recap video for Instagram Stories (added
+2026-10-24/25 at the owner's request, Mission page only; see below).
 Anything else
 (chat, profiles, points, analytics, integrations, WhatsApp posting) is out of
 scope.
@@ -156,6 +157,24 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
   `20261024090000_squad_recap.sql`; read from the browser in
   `src/lib/recap-client.ts`) + `member_case_counts`. Without the function the
   card says "Recap isn't available yet". Reduced motion: no movement.
+- **Monthly recap video** (Mission page, "Download Monthly Recap";
+  `src/components/recap/monthly-video.tsx`): pick a started campaign month
+  (months whose history doesn't add up are shown as "not enough history"),
+  preview, Generate Video, then Download Video / Share (file share, when the
+  browser supports it) / Preview Again / Close. Made entirely on the phone:
+  `video/composition.tsx` draws a dedicated 1080 × 1920 composition on a
+  canvas (5 scenes, 20.6 s, the Mission page look + the 3D art rasterised from
+  `components/art`), `video/encode.ts` encodes every frame as H.264 with
+  WebCodecs and muxes MP4 with **Mediabunny** (pinned 1.61.3, MPL-2.0,
+  dynamic import: only loaded when the dialog opens). Output is fixed in
+  `src/lib/recap-video.ts` (`VIDEO`: 1080 × 1920, 30 fps, 618 frames, no
+  audio, ~7 Mbit/s); the report is built there from `computeRecap` (no second
+  calculation), and one snapshot per month feeds both the preview and the file.
+  Progress = frames encoded; one job at a time; Cancel / Close stops it and
+  closes the encoder. No H.264 encoder (e.g. Firefox, open-source Chromium) ->
+  "Create image (PNG)" of the closing frame, labelled as a still image. Nothing
+  is uploaded or stored; no server rendering. File:
+  `CJO-Squad-Recap-<Month>-<Year>.mp4` / `.png`.
 - **App updates** (Home Screen apps resume old copies and have no reload or
   pull-to-refresh): `next.config.ts` stamps each build with `APP_VERSION`
   (Vercel deployment id); `/api/version` returns the live one (no-store).
@@ -215,6 +234,7 @@ The `(dashboard)` route group holds `/`, `/mission` and `/settings` with their
 | `src/app/(dashboard)/squad-actions.ts` | Check-in, phone link/preferences, cheers (Server Actions) |
 | `src/lib/me.ts`, `src/lib/cheers.ts` | This phone's member (localStorage store); cheer keys |
 | `src/lib/recap.ts`, `src/lib/recap-client.ts`, `src/components/recap/` | Squad Recap: periods + metrics (unit-tested), browser read, entry card / picker / player / summary |
+| `src/lib/recap-video.ts`, `src/components/recap/monthly-video.tsx`, `src/components/recap/video/` | Monthly recap video: report + timeline (unit-tested), export dialog, canvas composition, MP4 encoder / PNG fallback |
 | `src/lib/app-version.ts`, `src/components/app-update.tsx`, `src/app/api/version/route.ts` | Self-update for Home Screen apps (see "App updates") |
 | `src/components/` | `ui.tsx` (Card, Meter, Ring, Avatar), icons, `app-shell`, `nav/bottom-nav`, `mission/*` |
 | `scripts/members.mjs` | Admin CLI: list / add / rename / remove members |
@@ -317,8 +337,8 @@ Copy `.env.example` to `.env.local` (git-ignored).
   migration the app falls back to the legacy direct alerts. Rotating `PUSH_SECRET` means updating
   that row (`update private.push_settings set secret_hash = sha256(...)`).
   `20261024090000_squad_recap` (one read-only function, no table or policy
-  change) is NOT applied to the hosted project yet; until it is, the Recap card
-  reports "Recap isn't available yet". Undo: `drop function
+  change) is applied too (SQL editor, 2026-10-24; production recap verified
+  against the live October total). Undo: `drop function
   public.squad_recap_history(uuid, uuid, timestamptz);`.
 - Types were last generated with `@supabase/postgres-meta` against the migrated
   local database (`PG_META_GENERATE_TYPES_DETECT_ONE_TO_ONE_RELATIONSHIPS=true`,

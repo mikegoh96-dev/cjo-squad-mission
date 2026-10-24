@@ -50,7 +50,7 @@ export function SquadRecap({ ctx }: { ctx: RecapContext }) {
     setOpen(false);
     setStage({ name: "pick" });
     // Back to where the person was.
-    window.setTimeout(() => trigger.current?.focus(), 0);
+    trigger.current?.focus();
   };
   const closeRef = useRef(close);
   useEffect(() => {
