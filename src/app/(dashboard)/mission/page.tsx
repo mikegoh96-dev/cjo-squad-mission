@@ -6,7 +6,7 @@ import { AppShell } from "@/components/app-shell";
 import { Bolt3D, Medal3D, Star3D, Trophy3D } from "@/components/art/objects";
 import { MilestoneBadges } from "@/components/mission/milestone-badges";
 import { MonthCards } from "@/components/mission/month-cards";
-import { MonthlyVideo } from "@/components/recap/monthly-video";
+import { RecapVideo } from "@/components/recap/recap-video";
 import { SquadRecap } from "@/components/recap/squad-recap";
 import { StatusPill } from "@/components/status-pill";
 import { Card, Decor, Eyebrow, Meter, Ring } from "@/components/ui";
@@ -99,7 +99,7 @@ export default async function MissionPage() {
 
       <SquadRecap ctx={recapContext} />
 
-      <MonthlyVideo ctx={recapContext} />
+      <RecapVideo ctx={recapContext} />
 
       <MonthCards months={progress.months} dayOfMonth={progress.dayOfMonth} title="Monthly totals" />
 

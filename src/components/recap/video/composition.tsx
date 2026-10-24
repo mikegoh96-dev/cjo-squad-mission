@@ -13,8 +13,16 @@
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { Bolt3D, Gem3D, Medal3D, Star3D, Trophy3D } from "@/components/art/objects";
-import type { MilestoneKey } from "@/lib/mission";
-import { VIDEO, type VideoReport, resultLine, sceneAt, targetLine } from "@/lib/recap-video";
+import { type MilestoneKey, formatDelta } from "@/lib/mission";
+import {
+  type MonthlyVideoReport,
+  VIDEO,
+  type VideoReport,
+  type WeeklyVideoReport,
+  resultLine,
+  sceneAt,
+  targetLine,
+} from "@/lib/recap-video";
 
 type Art = "trophy" | "medal" | "star" | "bolt" | "gem";
 export type VideoAssets = {
@@ -316,7 +324,10 @@ export function drawFrame(ctx: Ctx, r: VideoReport, a: VideoAssets, ms: number) 
   ctx.globalAlpha = Math.min(fadeIn, fadeOut);
   ctx.translate(0, (1 - fadeIn) * 40);
   if (s.id === "opening") opening(ctx, r, a, s.local);
-  else if (s.id === "achievement") achievement(ctx, r, a, s.local);
+  else if (s.id === "achievement") {
+    if (r.kind === "week") weekAchievement(ctx, r, a, s.local);
+    else achievement(ctx, r, a, s.local);
+  }
   else if (s.id === "milestones") milestones(ctx, r, a, s.local);
   else if (s.id === "momentum") momentum(ctx, r, a, s.local);
   else closing(ctx, r, a, s.local, ms);
@@ -339,6 +350,12 @@ function scaled(ctx: Ctx, cx: number, cy: number, k: number, draw: () => void) {
   ctx.translate(-cx, -cy);
   draw();
   ctx.restore();
+}
+
+/** "this week" / "last week" / "that week" / "in October". */
+function when(r: VideoReport): string {
+  if (r.kind === "month") return `in ${r.monthLabel}`;
+  return r.title === "This week" ? "this week" : r.title === "Last week" ? "last week" : "that week";
 }
 
 function opening(ctx: Ctx, r: VideoReport, a: VideoAssets, t: number) {
@@ -368,17 +385,19 @@ function opening(ctx: Ctx, r: VideoReport, a: VideoAssets, t: number) {
   withAlpha(ctx, rise, () => {
     ctx.save();
     ctx.translate(0, (1 - rise) * 30);
-    text(ctx, a, `OUR ${r.monthLabel.toUpperCase()}`, 540, 1120, { size: 124, maxWidth: 940 });
-    text(ctx, a, "MISSION", 540, 1250, { size: 124, color: C.accentStrong });
+    text(ctx, a, r.kind === "month" ? `OUR ${r.monthLabel.toUpperCase()}` : "OUR WEEK", 540, 1120, { size: 124, maxWidth: 940 });
+    text(ctx, a, r.kind === "month" ? "MISSION" : "TOGETHER", 540, 1250, { size: 124, color: C.accentStrong });
     ctx.restore();
   });
   withAlpha(ctx, phase(t, 900, 500), () => {
-    text(ctx, a, `${r.monthLabel} ${r.year}`, 540, 1350, { size: 48, weight: 700, color: C.muted });
-    if (r.status === "in-progress") pill(ctx, a, "MONTH IN PROGRESS", 540, 1460, C.flameSoft, C.flameText, 32);
+    text(ctx, a, r.periodLabel, 540, 1350, { size: 48, weight: 700, color: C.muted, maxWidth: 940 });
+    if (r.status === "in-progress") {
+      pill(ctx, a, r.kind === "month" ? "MONTH IN PROGRESS" : "WEEK IN PROGRESS", 540, 1460, C.flameSoft, C.flameText, 32);
+    }
   });
 }
 
-function achievement(ctx: Ctx, r: VideoReport, a: VideoAssets, t: number) {
+function achievement(ctx: Ctx, r: MonthlyVideoReport, a: VideoAssets, t: number) {
   text(ctx, a, `${r.monthLabel.toUpperCase()} RESULT`, 540, 330, { size: 40, color: C.accent, spacing: 8 });
   card(ctx, a, 90, 390, 900, 1130, 72, "#ffffff", C.lip);
 
@@ -441,6 +460,79 @@ function achievement(ctx: Ctx, r: VideoReport, a: VideoAssets, t: number) {
   }
 }
 
+/** Weekly result: the week's net cases, a Mon–Sun bar per day, the month(s) as of the week's end. */
+function weekAchievement(ctx: Ctx, r: WeeklyVideoReport, a: VideoAssets, t: number) {
+  text(ctx, a, "WEEKLY RESULT", 540, 330, { size: 40, color: C.accent, spacing: 8 });
+  card(ctx, a, 90, 390, 900, 1130, 72, "#ffffff", C.lip);
+
+  const grow = easeOut(phase(t, 300, 1500));
+  const big = r.added > 0 ? `+${Math.round(r.added * grow)}` : formatDelta(r.added);
+  text(ctx, a, big, 540, 650, { size: 220, color: r.added > 0 ? C.accent : C.ink, maxWidth: 760 });
+  const label =
+    r.added < 0
+      ? "NET CHANGE THIS WEEK"
+      : r.status === "in-progress"
+        ? `${r.added === 1 ? "CASE" : "CASES"} ADDED SO FAR`
+        : `${r.added === 1 ? "CASE" : "CASES"} ADDED THIS WEEK`;
+  text(ctx, a, label, 540, 730, { size: 40, color: C.muted, spacing: 4, maxWidth: 800 });
+
+  // Mon–Sun bars (days of a running week still ahead are dashed outlines).
+  const max = Math.max(1, ...r.days.map((d) => d.net));
+  const left = 170;
+  const colW = 740 / 7;
+  const base = 1090;
+  r.days.forEach((d, i) => {
+    const x = left + i * colW + (colW - 64) / 2;
+    const p = easeOut(phase(t, 500 + i * 90, 700));
+    const h = d.net > 0 ? Math.max(14, (d.net / max) * 210) * p : 12;
+    if (d.future) {
+      ctx.save();
+      ctx.setLineDash([10, 8]);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "#b9c3e6";
+      roundRect(ctx, x, base - 12, 64, 12, 6);
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      ctx.fillStyle = d.net > 0 ? brand(ctx, x, base - h, 64, h) : C.track;
+      roundRect(ctx, x, base - h, 64, h, Math.min(16, h / 2));
+      ctx.fill();
+      if (d.net > 0) withAlpha(ctx, p, () => text(ctx, a, String(d.net), x + 32, base - h - 16, { size: 34, color: C.accentStrong }));
+    }
+    text(ctx, a, d.label, x + 32, base + 50, { size: 30, weight: 700, color: d.future ? "#9aa1bd" : C.muted });
+  });
+
+  // The month(s) the week belongs to, as they stood at the end of the week.
+  const rows = r.months.slice(0, 2);
+  const top = rows.length === 1 ? 1260 : 1225;
+  withAlpha(ctx, easeOut(phase(t, 1700, 500)), () => {
+    rows.forEach((m, i) => {
+      const y = top + i * 120;
+      text(ctx, a, m.label, 170, y, { size: 40, align: "left" });
+      text(ctx, a, `${m.total} / ${m.target} · ${m.percent}%`, 910, y, {
+        size: 40,
+        align: "right",
+        color: m.complete ? C.goodText : C.ink,
+      });
+      const fill = ctx.createLinearGradient(0, y + 24, 0, y + 52);
+      fill.addColorStop(0, m.complete ? "#4fd47f" : "#7392ff");
+      fill.addColorStop(1, m.complete ? C.good : C.accent);
+      meter(ctx, 170, y + 28, 740, 28, m.meterPercent, m.complete ? "#d5f2df" : C.track, fill);
+    });
+    if (r.shareOfTarget) {
+      text(ctx, a, `That's ${r.shareOfTarget.percent}% of the ${r.shareOfTarget.monthLabel} target`, 540, 1420, {
+        size: 38,
+        weight: 700,
+        color: C.muted,
+        maxWidth: 800,
+      });
+    }
+  });
+  if (r.status === "in-progress") {
+    withAlpha(ctx, phase(t, 2400, 500), () => text(ctx, a, "So far this week", 540, 1600, { size: 36, weight: 700, color: C.muted }));
+  }
+}
+
 function milestones(ctx: Ctx, r: VideoReport, a: VideoAssets, t: number) {
   const list = r.milestones.slice(0, 4);
   if (list.length === 0) {
@@ -450,7 +542,9 @@ function milestones(ctx: Ctx, r: VideoReport, a: VideoAssets, t: number) {
     text(
       ctx,
       a,
-      r.total === 0 ? "Every milestone starts with a single case." : "Every update moved the squad forward together.",
+      (r.kind === "month" ? r.total : r.added) <= 0
+        ? "Every milestone starts with a single case."
+        : "Every update moved the squad forward together.",
       540,
       1190,
       { size: 42, weight: 600, color: C.muted, maxWidth: 920 },
@@ -459,7 +553,7 @@ function milestones(ctx: Ctx, r: VideoReport, a: VideoAssets, t: number) {
   }
   text(ctx, a, "MILESTONES UNLOCKED", 540, 330, { size: 40, color: C.accent, spacing: 8 });
   text(ctx, a, list.length === 1 ? "1 milestone" : `${list.length} milestones`, 540, 450, { size: 96 });
-  text(ctx, a, `Reached together in ${r.monthLabel}`, 540, 530, { size: 42, weight: 600, color: C.muted });
+  text(ctx, a, `Reached together ${when(r)}`, 540, 530, { size: 42, weight: 600, color: C.muted });
 
   // 1: one centred tile; 2: a row; 3: two + one centred; 4: a 2 × 2 grid.
   const size = 400;
@@ -499,7 +593,7 @@ function momentum(ctx: Ctx, r: VideoReport, a: VideoAssets, t: number) {
   text(ctx, a, "Stronger together", 540, 450, { size: 96, maxWidth: 940 });
 
   const stats: [string, string][] = [
-    [r.added > 0 ? `+${r.added}` : String(r.added), `cases added together in ${r.monthLabel}`],
+    [formatDelta(r.added), `${Math.abs(r.added) === 1 ? "case" : "cases"} added together ${when(r)}`],
   ];
   if (r.contributors > 0) stats.push([String(r.contributors), r.contributors === 1 ? "teammate added cases" : "teammates added cases"]);
   if (r.activeDays > 0) stats.push([String(r.activeDays), r.activeDays === 1 ? "day with cases added" : "days with cases added"]);

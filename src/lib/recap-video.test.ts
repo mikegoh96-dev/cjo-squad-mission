@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { type HistoryEvent, computeRecap, makePeriod } from "./recap.ts";
 import {
+  type MonthlyVideoReport,
+  type WeeklyVideoReport,
   VIDEO,
   VIDEO_DURATION_MS,
   VIDEO_FRAMES,
@@ -40,7 +42,22 @@ function report(events: HistoryEvent[], month = "2026-10-01", now = sg("2026-11-
     memberIds: ["a", "b", "c"],
     now,
   });
-  return buildVideoReport(recap, "CJO Squad Mission Q4 2026");
+  const r = buildVideoReport(recap, "CJO Squad Mission Q4 2026");
+  if (r) assert.equal(r.kind, "month");
+  return r as MonthlyVideoReport | null;
+}
+function weekly(events: HistoryEvent[], monday: string, now: Date, members = ["a", "b", "c"]) {
+  const recap = computeRecap({
+    period: makePeriod("week", monday, TZ, now),
+    events,
+    targets,
+    storedTotals: totals(events),
+    memberIds: members,
+    now,
+  });
+  const r = buildVideoReport(recap, "CJO Squad Mission Q4 2026");
+  if (r) assert.equal(r.kind, "week");
+  return r as WeeklyVideoReport | null;
 }
 
 describe("timeline", () => {
@@ -140,27 +157,20 @@ describe("buildVideoReport", () => {
     assert.deepEqual(nov.milestones.map((m) => m.key), ["started"]);
   });
 
-  test("an unavailable or weekly recap gives no report", () => {
+  test("an unavailable recap gives no report", () => {
     const events = [ev("2026-10-05T10:00:00", 5)];
     const now = sg("2026-10-24T21:00:00");
-    const broken = computeRecap({
-      period: makePeriod("month", "2026-10-01", TZ, now),
-      events,
-      targets,
-      storedTotals: { "2026-10-01": 9 },
-      memberIds: ["a"],
-      now,
-    });
-    assert.equal(buildVideoReport(broken, "Q4"), null);
-    const weekly = computeRecap({
-      period: makePeriod("week", "2026-10-19", TZ, now),
-      events,
-      targets,
-      storedTotals: totals(events),
-      memberIds: ["a"],
-      now,
-    });
-    assert.equal(buildVideoReport(weekly, "Q4"), null);
+    for (const kind of ["month", "week"] as const) {
+      const broken = computeRecap({
+        period: makePeriod(kind, kind === "month" ? "2026-10-01" : "2026-10-19", TZ, now),
+        events,
+        targets,
+        storedTotals: { "2026-10-01": 9 },
+        memberIds: ["a"],
+        now,
+      });
+      assert.equal(buildVideoReport(broken, "Q4"), null);
+    }
   });
 
   test("an empty month reads as zero", () => {
@@ -169,5 +179,75 @@ describe("buildVideoReport", () => {
     assert.equal(r.percent, 0);
     assert.equal(r.remaining, 20);
     assert.deepEqual(r.milestones, []);
+  });
+});
+
+describe("buildVideoReport (weekly)", () => {
+  const NOW = sg("2026-10-24T21:00:00"); // Saturday
+  test("the week's net, days, month rows as of the week's end, share of target", () => {
+    const events = [
+      ev("2026-10-12T10:00:00", 19, "a"), // last week
+      ev("2026-10-18T23:59:59.999", 1, "a"), // Sunday: still last week
+      ev("2026-10-19T00:00:00", 2, "b"), // Monday 00:00: this week
+      ev("2026-10-20T11:00:00", 5, "c"),
+      ev("2026-10-20T12:00:00", -1, "c"), // correction
+      ev("2026-10-22T09:00:00", 3, "a"),
+    ];
+    const r = weekly(events, "2026-10-19", NOW)!;
+    assert.equal(r.title, "This week");
+    assert.equal(r.periodLabel, "Mon 19 Oct – Sun 25 Oct 2026");
+    assert.equal(r.status, "in-progress");
+    assert.equal(r.added, 9, "net this week, never the month total (29)");
+    assert.equal(r.contributors, 3);
+    assert.equal(r.activeDays, 3);
+    assert.deepEqual(
+      r.days.map((d) => [d.label, d.net, d.future]),
+      [["Mon", 2, false], ["Tue", 4, false], ["Wed", 0, false], ["Thu", 3, false], ["Fri", 0, false], ["Sat", 0, false], ["Sun", 0, true]],
+    );
+    assert.deepEqual(r.months, [
+      { label: "October", total: 29, target: 20, percent: 145, meterPercent: 100, complete: true, added: 9 },
+    ]);
+    assert.deepEqual(r.shareOfTarget, { percent: 45, monthLabel: "October" });
+    assert.equal(r.campaign?.total, 29);
+    assert.equal(r.fileBase, "CJO-Squad-Recap-Week-of-19-Oct-2026");
+    assert.equal(resultLine(r), "Week of 19 Oct 2026 · +9 cases together");
+    // Last week holds the Sunday 23:59:59.999 case and its own end-of-week progress.
+    const last = weekly(events, "2026-10-12", NOW)!;
+    assert.equal(last.title, "Last week");
+    assert.equal(last.status, "completed");
+    assert.equal(last.added, 20);
+    assert.equal(last.months[0].total, 20);
+    assert.deepEqual(last.milestones.map((m) => m.key), ["started", "halfway", "momentum", "cleared"]);
+    assert.deepEqual(r.milestones, [], "nothing new this week");
+  });
+
+  test("a week across two months shows both months, no single share", () => {
+    const events = [ev("2026-10-27T10:00:00", 2), ev("2026-11-01T10:00:00", 3)];
+    const r = weekly(events, "2026-10-26", sg("2026-11-03T10:00:00"))!;
+    assert.equal(r.added, 5);
+    assert.deepEqual(r.months.map((m) => [m.label, m.added, m.total, m.target]), [["October", 2, 2, 20], ["November", 3, 3, 30]]);
+    assert.equal(r.shareOfTarget, null);
+    assert.deepEqual(r.milestones.map((m) => [m.key, m.monthLabel]), [["started", "October"], ["started", "November"]]);
+    assert.equal(r.fileBase, "CJO-Squad-Recap-Week-of-26-Oct-2026");
+  });
+
+  test("a quiet week and a corrections-only week read honestly", () => {
+    const quiet = weekly([ev("2026-10-05T10:00:00", 4)], "2026-10-19", NOW)!;
+    assert.equal(quiet.added, 0);
+    assert.equal(quiet.activeDays, 0);
+    assert.equal(quiet.contributors, 0);
+    assert.equal(quiet.shareOfTarget, null);
+    assert.equal(quiet.months[0].total, 4);
+    assert.equal(resultLine(quiet), "Week of 19 Oct 2026 · 0 cases together");
+    const fixes = weekly([ev("2026-10-05T10:00:00", 4), ev("2026-10-20T10:00:00", -1)], "2026-10-19", NOW)!;
+    assert.equal(fixes.added, -1);
+    assert.equal(resultLine(fixes), "Week of 19 Oct 2026 · −1 case together");
+  });
+
+  test("the first campaign week starts before the campaign: only campaign months are shown", () => {
+    const r = weekly([ev("2026-10-02T10:00:00", 1)], "2026-09-28", sg("2026-10-03T10:00:00"))!;
+    assert.equal(r.periodLabel, "Mon 28 Sep – Sun 4 Oct 2026");
+    assert.deepEqual(r.months.map((m) => m.label), ["October"]);
+    assert.equal(r.fileBase, "CJO-Squad-Recap-Week-of-28-Sep-2026");
   });
 });

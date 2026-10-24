@@ -15,15 +15,31 @@ import {
 } from "@/components/icons";
 import type { RecapContext } from "@/components/recap/recap-player";
 import { Card, Decor } from "@/components/ui";
-import { computeRecap, makePeriod, recapPeriods } from "@/lib/recap";
+import { type RecapKind, computeRecap, makePeriod, recapPeriods } from "@/lib/recap";
 import { RecapLoadError, fetchRecapData } from "@/lib/recap-client";
-import { VIDEO, VIDEO_DURATION_MS, VIDEO_SCENES, type VideoReport, buildVideoReport, sceneStart } from "@/lib/recap-video";
+import {
+  VIDEO,
+  VIDEO_DURATION_MS,
+  VIDEO_SCENES,
+  type VideoReport,
+  buildVideoReport,
+  resultLine,
+  sceneStart,
+} from "@/lib/recap-video";
 
 type Composition = typeof import("./video/composition");
 type Encoder = typeof import("./video/encode");
 type Assets = Awaited<ReturnType<Composition["loadVideoAssets"]>>;
 
-type MonthOption = { month: string; label: string; status: "in-progress" | "completed"; report: VideoReport | null };
+/** One period the video can cover ("week:2026-10-19", "month:2026-10-01"). */
+type PeriodOption = {
+  key: string;
+  kind: RecapKind;
+  label: string;
+  sub: string | null;
+  status: "in-progress" | "completed";
+  report: VideoReport | null;
+};
 type Made = { blob: Blob; url: string; name: string; kind: "mp4" | "png" };
 type Step =
   | { name: "loading" }
@@ -38,23 +54,37 @@ const PREVIEW_SCALE = 0.5;
 const settled = (i: number) => sceneStart(i) + (i === VIDEO_SCENES.length - 1 ? VIDEO_SCENES[i].ms - 1 : VIDEO_SCENES[i].ms - 400);
 const fmtMB = (bytes: number) => `${(bytes / 1_000_000).toFixed(1)} MB`;
 
+/** What the preview canvas shows, for screen readers. */
+function previewLabel(r: VideoReport): string {
+  if (r.kind === "week") {
+    return `Preview of the ${r.title.toLowerCase()} recap (${r.periodLabel}): ${r.added > 0 ? "+" : ""}${r.added} ${
+      Math.abs(r.added) === 1 ? "case" : "cases"
+    } together`;
+  }
+  return `Preview of the ${r.monthLabel} ${r.year} recap: ${r.total}${r.target !== null ? ` of ${r.target}` : ""} cases${
+    r.percent !== null ? `, ${r.percent}% complete` : ""
+  }`;
+}
+
 /**
- * Mission page: download this month's recap as a vertical video for Instagram
- * Stories. Everything is made on this device from the same recap numbers as
+ * Mission page: download a week's or a month's recap as a vertical video for
+ * Instagram Stories. Everything is made on this device from the same recap numbers as
  * the Squad Recap (no server rendering, nothing uploaded). Browsers that can't
  * encode H.264 get a PNG of the closing frame instead, clearly labelled.
  */
-export function MonthlyVideo({ ctx }: { ctx: RecapContext }) {
+export function RecapVideo({ ctx }: { ctx: RecapContext }) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>({ name: "loading" });
-  const [options, setOptions] = useState<MonthOption[]>([]);
-  const [month, setMonth] = useState<string | null>(null);
+  const [options, setOptions] = useState<PeriodOption[]>([]);
+  const [kind, setKind] = useState<RecapKind>("month");
+  const [selected, setSelected] = useState<string | null>(null);
   const [mp4, setMp4] = useState<boolean | null>(null);
   const [playing, setPlaying] = useState(true);
   const [still, setStill] = useState(0);
   const [reduced, setReduced] = useState(false);
   const [note, setNote] = useState<string | null>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
+  /** The card button that opened the dialog (focus goes back there). */
+  const trigger = useRef<HTMLButtonElement | null>(null);
   const overlay = useRef<HTMLDivElement>(null);
   const preview = useRef<HTMLCanvasElement>(null);
   const assets = useRef<Assets | null>(null);
@@ -65,7 +95,8 @@ export function MonthlyVideo({ ctx }: { ctx: RecapContext }) {
   /** Where the playing preview is (ms), so Pause freezes on the current frame. */
   const previewAt = useRef(0);
 
-  const report = options.find((o) => o.month === month)?.report ?? null;
+  const shown = options.filter((o) => o.kind === kind);
+  const report = shown.find((o) => o.key === selected)?.report ?? null;
 
   const release = () => {
     abort.current?.abort();
@@ -84,7 +115,7 @@ export function MonthlyVideo({ ctx }: { ctx: RecapContext }) {
     closeRef.current = close;
   });
 
-  const load = () => {
+  const load = (forKind: RecapKind) => {
     setStep({ name: "loading" });
     setNote(null);
     const memberIds = ctx.members.map((m) => m.id);
@@ -100,27 +131,30 @@ export function MonthlyVideo({ ctx }: { ctx: RecapContext }) {
     ])
       .then(([data, , canMp4]) => {
         if (controller.signal.aborted) return;
-        // One snapshot per month, taken now: the preview and the file both use it.
+        // One snapshot per period, taken now: the preview and the file both use it.
         const now = new Date();
-        const months = recapPeriods({ kind: "month", campaign: ctx.campaign, months: ctx.targets.map((t) => t.month), now });
-        const list = months.map((p) => {
-          const recap = computeRecap({
-            period: makePeriod("month", p.startDate, p.timeZone, now),
-            events: data.events,
-            targets: ctx.targets,
-            storedTotals: data.storedTotals,
-            memberIds,
-            now,
-          });
-          return {
-            month: p.startDate,
-            label: `${p.title} ${p.startDate.slice(0, 4)}`,
-            status: p.status,
-            report: buildVideoReport(recap, ctx.campaign.name),
-          };
-        });
+        const list: PeriodOption[] = (["week", "month"] as const).flatMap((k) =>
+          recapPeriods({ kind: k, campaign: ctx.campaign, months: ctx.targets.map((t) => t.month), now }).map((p) => {
+            const recap = computeRecap({
+              period: makePeriod(k, p.startDate, p.timeZone, now),
+              events: data.events,
+              targets: ctx.targets,
+              storedTotals: data.storedTotals,
+              memberIds,
+              now,
+            });
+            return {
+              key: p.key,
+              kind: k,
+              label: k === "week" ? p.title : `${p.title} ${p.startDate.slice(0, 4)}`,
+              sub: k === "week" ? p.rangeLabel : null,
+              status: p.status,
+              report: buildVideoReport(recap, ctx.campaign.name),
+            };
+          }),
+        );
         setOptions(list);
-        setMonth(list.find((o) => o.report)?.month ?? null);
+        setSelected(list.find((o) => o.kind === forKind && o.report)?.key ?? null);
         setMp4(canMp4);
         setStill(0);
         setStep({ name: "preview" });
@@ -131,12 +165,25 @@ export function MonthlyVideo({ ctx }: { ctx: RecapContext }) {
       });
   };
 
-  const start = () => {
+  const start = (forKind: RecapKind, opener: HTMLButtonElement) => {
+    trigger.current = opener;
+    setKind(forKind);
     previewAt.current = 0;
     setReduced(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     setPlaying(!window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     setOpen(true);
-    load();
+    load(forKind);
+  };
+
+  const pick = (key: string) => {
+    setSelected(key);
+    setStill(0);
+    previewAt.current = 0;
+    if (step.name !== "preview") setStep({ name: "preview" });
+  };
+  const switchKind = (k: RecapKind) => {
+    setKind(k);
+    pick(options.find((o) => o.kind === k && o.report)?.key ?? "");
   };
 
   const generate = async () => {
@@ -223,9 +270,10 @@ export function MonthlyVideo({ ctx }: { ctx: RecapContext }) {
       return;
     }
     let frame = 0;
-    let begin = performance.now() - previewAt.current;
+    let begin = -1;
     let lastDraw = 0;
     const tick = (now: number) => {
+      if (begin < 0) begin = now - previewAt.current; // resume where it was paused
       if (now - lastDraw >= 1000 / VIDEO.fps - 1) {
         lastDraw = now;
         // Hold the last frame for a moment, then loop.
@@ -301,22 +349,34 @@ export function MonthlyVideo({ ctx }: { ctx: RecapContext }) {
           <div className="min-w-0 flex-1">
             <p className="text-[12px] font-bold tracking-[0.12em] text-muted uppercase">For Instagram Stories</p>
             <h2 id="video-title" className="mt-1 text-[20px] leading-tight font-extrabold">
-              Monthly Recap video
+              Recap video
             </h2>
-            <p className="mt-1 text-[15px] text-muted">Celebrate the squad&apos;s progress. Download and share this month&apos;s mission.</p>
+            <p className="mt-1 text-[15px] text-muted">
+              Celebrate the squad&apos;s progress. Download and share this week&apos;s or this month&apos;s mission.
+            </p>
           </div>
           <Trophy3D className="-mt-1 size-14 shrink-0" />
         </div>
-        <button
-          ref={trigger}
-          type="button"
-          onClick={start}
-          aria-haspopup="dialog"
-          data-testid="video-open"
-          className="btn-3d btn-3d-brand mt-4 flex h-12 w-full items-center justify-center rounded-btn text-[16px] font-extrabold"
-        >
-          Download Monthly Recap
-        </button>
+        <div className="mt-4 flex flex-col gap-3">
+          <button
+            type="button"
+            onClick={(e) => start("month", e.currentTarget)}
+            aria-haspopup="dialog"
+            data-testid="video-open"
+            className="btn-3d btn-3d-brand flex h-12 w-full items-center justify-center rounded-btn text-[16px] font-extrabold"
+          >
+            Download Monthly Recap
+          </button>
+          <button
+            type="button"
+            onClick={(e) => start("week", e.currentTarget)}
+            aria-haspopup="dialog"
+            data-testid="video-open-week"
+            className="btn-3d btn-3d-soft flex h-12 w-full items-center justify-center rounded-btn text-[16px] font-extrabold"
+          >
+            Download Weekly Recap
+          </button>
+        </div>
       </Card>
 
       {open
@@ -339,7 +399,7 @@ export function MonthlyVideo({ ctx }: { ctx: RecapContext }) {
               >
                 <div className="flex items-start justify-between gap-3">
                   <h2 id="video-dialog-title" className="pt-1 text-[22px] leading-tight font-extrabold">
-                    Monthly Recap
+                    {kind === "week" ? "Weekly Recap" : "Monthly Recap"}
                   </h2>
                   <button
                     type="button"
@@ -356,7 +416,7 @@ export function MonthlyVideo({ ctx }: { ctx: RecapContext }) {
                 {step.name === "loading" ? (
                   <div className="py-8 text-center" role="status" data-testid="video-loading">
                     <span className="mx-auto block size-10 animate-spin rounded-full border-4 border-accent-track border-t-accent motion-reduce:animate-none" />
-                    <p className="mt-4 text-[16px] font-bold">Getting this month&apos;s numbers…</p>
+                    <p className="mt-4 text-[16px] font-bold">Getting the squad&apos;s numbers…</p>
                   </div>
                 ) : step.name === "error" ? (
                   <Problem
@@ -366,41 +426,68 @@ export function MonthlyVideo({ ctx }: { ctx: RecapContext }) {
                         ? "The squad's history isn't connected to recaps yet."
                         : "Check your connection and try again."
                     }
-                    onRetry={step.kind === "failed" ? load : undefined}
+                    onRetry={step.kind === "failed" ? () => load(kind) : undefined}
                     onBack={close}
                   />
                 ) : (
                   <>
                     <fieldset className="mt-3" disabled={step.name === "rendering"}>
-                      <legend className="px-1 text-[13px] font-bold text-muted">Month</legend>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {options.map((o) => (
+                      <legend className="sr-only">Recap type</legend>
+                      <div className="grid grid-cols-2 gap-1 rounded-btn bg-surface-2 p-1">
+                        {(
+                          [
+                            ["week", "Weekly"],
+                            ["month", "Monthly"],
+                          ] as const
+                        ).map(([k, label]) => (
                           <label
-                            key={o.month}
-                            className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-full px-4 text-[15px] font-bold ring-2 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60 has-[:focus-visible]:ring-accent ${
-                              o.month === month ? "bg-accent-soft text-accent-strong ring-accent/60" : "bg-surface-2 ring-transparent"
+                            key={k}
+                            className={`flex h-11 cursor-pointer items-center justify-center rounded-[12px] text-[15px] font-bold transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent ${
+                              kind === k ? "bg-surface text-foreground shadow-tile" : "text-muted"
                             }`}
-                            data-testid={`video-month-${o.month}`}
                           >
                             <input
                               type="radio"
-                              name="video-month"
-                              value={o.month}
-                              checked={o.month === month}
+                              name="video-kind"
+                              value={k}
+                              checked={kind === k}
+                              onChange={() => switchKind(k)}
+                              className="sr-only"
+                              data-testid={`video-kind-${k}`}
+                            />
+                            {label}
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+                    <fieldset className="mt-3" disabled={step.name === "rendering"}>
+                      <legend className="px-1 text-[13px] font-bold text-muted">{kind === "week" ? "Week" : "Month"}</legend>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {shown.map((o) => (
+                          <label
+                            key={o.key}
+                            className={`flex min-h-11 cursor-pointer flex-col justify-center rounded-[20px] px-4 py-1.5 text-[15px] font-bold ring-2 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60 has-[:focus-visible]:ring-accent ${
+                              o.key === selected ? "bg-accent-soft text-accent-strong ring-accent/60" : "bg-surface-2 ring-transparent"
+                            }`}
+                            data-testid={`video-period-${o.key}`}
+                          >
+                            <input
+                              type="radio"
+                              name="video-period"
+                              value={o.key}
+                              checked={o.key === selected}
                               disabled={!o.report}
-                              onChange={() => {
-                                setMonth(o.month);
-                                setStill(0);
-                                previewAt.current = 0;
-                                if (step.name !== "preview") setStep({ name: "preview" });
-                              }}
+                              onChange={() => pick(o.key)}
                               className="sr-only"
                             />
-                            {o.label}
-                            {!o.report ? <span className="text-[12px] font-semibold text-muted">· not enough history</span> : null}
-                            {o.report && o.status === "in-progress" ? (
-                              <span className="text-[12px] font-semibold text-flame-text">· so far</span>
-                            ) : null}
+                            <span>
+                              {o.label}
+                              {!o.report ? <span className="text-[12px] font-semibold text-muted"> · not enough history</span> : null}
+                              {o.report && o.status === "in-progress" ? (
+                                <span className="text-[12px] font-semibold text-flame-text"> · so far</span>
+                              ) : null}
+                            </span>
+                            {o.sub ? <span className="text-[12px] font-semibold text-muted">{o.sub}</span> : null}
                           </label>
                         ))}
                       </div>
@@ -409,7 +496,7 @@ export function MonthlyVideo({ ctx }: { ctx: RecapContext }) {
                     {!report ? (
                       <p className="mt-4 rounded-tile bg-surface-2 p-4 text-[15px]" data-testid="video-none">
                         {options.length
-                          ? "There isn't enough recorded history to make a recap for these months."
+                          ? `There isn't enough recorded history to make a recap for ${kind === "week" ? "these weeks" : "these months"}.`
                           : "Recaps open when the campaign starts."}
                       </p>
                     ) : step.name === "done" ? (
@@ -434,9 +521,7 @@ export function MonthlyVideo({ ctx }: { ctx: RecapContext }) {
                               width={VIDEO.width * PREVIEW_SCALE}
                               height={VIDEO.height * PREVIEW_SCALE}
                               role="img"
-                              aria-label={`Preview of the ${report.monthLabel} ${report.year} recap: ${report.total}${
-                                report.target !== null ? ` of ${report.target}` : ""
-                              } cases${report.percent !== null ? `, ${report.percent}% complete` : ""}`}
+                              aria-label={previewLabel(report)}
                               className={`block h-[min(52dvh,480px)] w-auto rounded-tile bg-[#eef1fb] shadow-tile ${
                                 step.name === "rendering" ? "opacity-60" : ""
                               }`}
@@ -606,10 +691,8 @@ function Done({
           {made.name} · {video ? "MP4 video" : "PNG image"} · 1080 × 1920
           {video ? ` · ${(VIDEO_DURATION_MS / 1000).toFixed(1)} s` : ""} · {fmtMB(made.blob.size)}
         </p>
-        <p className="mt-1 text-[13px] text-muted">
-          {report.monthLabel} {report.year} · {report.total}
-          {report.target !== null ? ` of ${report.target}` : ""} cases
-          {report.percent !== null ? ` · ${report.percent}%` : ""}
+        <p className="mt-1 text-[13px] text-muted" data-testid="video-result">
+          {resultLine(report)}
         </p>
       </div>
       {video ? null : (
