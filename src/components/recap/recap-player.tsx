@@ -19,7 +19,7 @@ import {
 } from "@/components/icons";
 import { Avatar, Meter } from "@/components/ui";
 import { type MilestoneKey, formatDelta, pluralCases } from "@/lib/mission";
-import { type Recap, type RecapPeriod, recapHeadline, recapSummaryText, weekdayShort } from "@/lib/recap";
+import { type Recap, type RecapKind, type RecapPeriod, recapHeadline, recapSummaryText, weekdayShort } from "@/lib/recap";
 
 export type ReadyRecap = Extract<Recap, { state: "ready" }>;
 
@@ -79,8 +79,8 @@ export function RecapPlayer({
   recap: ReadyRecap;
   ctx: RecapContext;
   onClose: () => void;
-  /** Opens the recap video export for this same period (absent: no video button). */
-  onVideo?: () => void;
+  /** Opens the recap video export on a kind and period (absent: no video buttons). */
+  onVideo?: (kind: RecapKind, periodKey?: string) => void;
 }) {
   const [scene, setScene] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -527,7 +527,7 @@ function RecapSummary({
   ctx: RecapContext;
   onReplay: () => void;
   onClose: () => void;
-  onVideo?: () => void;
+  onVideo?: (kind: RecapKind, periodKey?: string) => void;
 }) {
   const p: RecapPeriod = recap.period;
   const unit = p.kind === "week" ? "week" : "month";
@@ -638,18 +638,21 @@ function RecapSummary({
         >
           Back to Mission
         </button>
-        {onVideo ? (
-          <button
-            type="button"
-            onClick={onVideo}
-            aria-haspopup="dialog"
-            data-testid="recap-video"
-            className="btn-3d btn-3d-soft flex h-12 items-center justify-center gap-2 rounded-btn text-[15px] font-extrabold"
-          >
-            <DownloadIcon className="size-4" />
-            {p.kind === "week" ? "Download Weekly Recap Video" : "Download Monthly Recap Video"}
-          </button>
-        ) : null}
+        {onVideo
+          ? videoChoices(recap).map((v) => (
+              <button
+                key={v.kind}
+                type="button"
+                onClick={() => onVideo(v.kind, v.periodKey)}
+                aria-haspopup="dialog"
+                data-testid={`recap-video-${v.kind}`}
+                className="btn-3d btn-3d-soft flex h-12 items-center justify-center gap-2 rounded-btn text-[15px] font-extrabold"
+              >
+                <DownloadIcon className="size-4" />
+                {v.kind === "week" ? "Download Weekly Recap Video" : "Download Monthly Recap Video"}
+              </button>
+            ))
+          : null}
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
@@ -678,6 +681,20 @@ function RecapSummary({
       </div>
     </div>
   );
+}
+
+/**
+ * Both videos from any summary, the viewed period's kind first: a weekly
+ * summary offers that week and the month it belongs to (its latest month); a
+ * monthly summary offers that month and the video's default week (this week).
+ */
+function videoChoices(recap: ReadyRecap): { kind: RecapKind; periodKey?: string }[] {
+  const p = recap.period;
+  if (p.kind === "week") {
+    const month = recap.months.at(-1)?.month;
+    return [{ kind: "week", periodKey: p.key }, { kind: "month", periodKey: month ? `month:${month}` : undefined }];
+  }
+  return [{ kind: "month", periodKey: p.key }, { kind: "week" }];
 }
 
 function Stat({ label, value, testId }: { label: string; value: string; testId?: string }) {

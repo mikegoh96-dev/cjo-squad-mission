@@ -190,11 +190,10 @@ export function SquadRecap({ ctx }: { ctx: RecapContext }) {
                     onClose={close}
                     onVideo={
                       video
-                        ? () => {
-                            // Hand over to the video export for the same period; focus comes back to Generate Recap.
-                            const { kind, key } = stage.recap.period;
+                        ? (kind, periodKey) => {
+                            // Hand over to the video export; focus comes back to Generate Recap afterwards.
                             close();
-                            video.open(kind, trigger.current, key);
+                            video.open(kind, trigger.current, periodKey);
                           }
                         : undefined
                     }

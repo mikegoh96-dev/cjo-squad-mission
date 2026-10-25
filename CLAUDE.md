@@ -143,8 +143,9 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
   -> a ~22 s animated story (opening, squad performance, milestones, thank-you
   to the whole squad A–Z, next mission) with pause, back/next, skip to summary,
   close (× / Escape) -> a summary card (Replay, Back to Mission, "Download
-  Weekly/Monthly Recap Video" (closes the recap and opens the recap video export
-  on the same period), Share or Copy summary: only what the browser supports). Periods are whole days in the
+  Weekly Recap Video" + "Download Monthly Recap Video" (the viewed kind first;
+  closes the recap and opens the recap video export: a weekly summary -> that
+  week / the month it belongs to; a monthly summary -> that month / this week), Share or Copy summary: only what the browser supports). Periods are whole days in the
   campaign time zone, end exclusive: week = Monday 00:00 -> next Monday 00:00,
   month = 1st -> next 1st. Maths in `src/lib/recap.ts` (pure, unit-tested):
   cases = net of the recorded changes inside the period (never the current
