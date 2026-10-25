@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Trophy3D } from "@/components/art/objects";
 import {
@@ -72,7 +72,18 @@ function previewLabel(r: VideoReport): string {
  * the Squad Recap (no server rendering, nothing uploaded). Browsers that can't
  * encode H.264 get a PNG of the closing frame instead, clearly labelled.
  */
-export function RecapVideo({ ctx }: { ctx: RecapContext }) {
+type Launcher = {
+  /** Opens the video dialog on a kind, optionally on one period ("week:2026-10-19"). Focus returns to `opener`. */
+  open: (kind: RecapKind, opener: HTMLElement | null, periodKey?: string) => void;
+};
+const VideoLauncher = createContext<Launcher | null>(null);
+
+/** Opens the recap video dialog from anywhere inside RecapVideoProvider (null outside it). */
+export function useRecapVideo(): Launcher | null {
+  return useContext(VideoLauncher);
+}
+
+export function RecapVideoProvider({ ctx, children }: { ctx: RecapContext; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>({ name: "loading" });
   const [options, setOptions] = useState<PeriodOption[]>([]);
@@ -83,8 +94,8 @@ export function RecapVideo({ ctx }: { ctx: RecapContext }) {
   const [still, setStill] = useState(0);
   const [reduced, setReduced] = useState(false);
   const [note, setNote] = useState<string | null>(null);
-  /** The card button that opened the dialog (focus goes back there). */
-  const trigger = useRef<HTMLButtonElement | null>(null);
+  /** The button that opened the dialog (focus goes back there). */
+  const trigger = useRef<HTMLElement | null>(null);
   const overlay = useRef<HTMLDivElement>(null);
   const preview = useRef<HTMLCanvasElement>(null);
   const assets = useRef<Assets | null>(null);
@@ -115,7 +126,7 @@ export function RecapVideo({ ctx }: { ctx: RecapContext }) {
     closeRef.current = close;
   });
 
-  const load = (forKind: RecapKind) => {
+  const load = (forKind: RecapKind, periodKey?: string) => {
     setStep({ name: "loading" });
     setNote(null);
     const memberIds = ctx.members.map((m) => m.id);
@@ -154,7 +165,8 @@ export function RecapVideo({ ctx }: { ctx: RecapContext }) {
           }),
         );
         setOptions(list);
-        setSelected(list.find((o) => o.kind === forKind && o.report)?.key ?? null);
+        const wanted = list.find((o) => o.key === periodKey && o.report);
+        setSelected(wanted?.key ?? list.find((o) => o.kind === forKind && o.report)?.key ?? null);
         setMp4(canMp4);
         setStill(0);
         setStep({ name: "preview" });
@@ -165,14 +177,14 @@ export function RecapVideo({ ctx }: { ctx: RecapContext }) {
       });
   };
 
-  const start = (forKind: RecapKind, opener: HTMLButtonElement) => {
+  const start = (forKind: RecapKind, opener: HTMLElement | null, periodKey?: string) => {
     trigger.current = opener;
     setKind(forKind);
     previewAt.current = 0;
     setReduced(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     setPlaying(!window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     setOpen(true);
-    load(forKind);
+    load(forKind, periodKey);
   };
 
   const pick = (key: string) => {
@@ -340,44 +352,8 @@ export function RecapVideo({ ctx }: { ctx: RecapContext }) {
   };
 
   return (
-    <>
-      <Card className="animate-rise relative isolate [animation-delay:120ms]" aria-labelledby="video-title" data-testid="video-card">
-        <Decor radius="card">
-          <span className="absolute -bottom-16 -left-14 size-52 rounded-full bg-[radial-gradient(circle,var(--accent-soft),transparent_70%)]" />
-        </Decor>
-        <div className="flex items-start gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-[12px] font-bold tracking-[0.12em] text-muted uppercase">For Instagram Stories</p>
-            <h2 id="video-title" className="mt-1 text-[20px] leading-tight font-extrabold">
-              Recap video
-            </h2>
-            <p className="mt-1 text-[15px] text-muted">
-              Celebrate the squad&apos;s progress. Download and share this week&apos;s or this month&apos;s mission.
-            </p>
-          </div>
-          <Trophy3D className="-mt-1 size-14 shrink-0" />
-        </div>
-        <div className="mt-4 flex flex-col gap-3">
-          <button
-            type="button"
-            onClick={(e) => start("month", e.currentTarget)}
-            aria-haspopup="dialog"
-            data-testid="video-open"
-            className="btn-3d btn-3d-brand flex h-12 w-full items-center justify-center rounded-btn text-[16px] font-extrabold"
-          >
-            Download Monthly Recap
-          </button>
-          <button
-            type="button"
-            onClick={(e) => start("week", e.currentTarget)}
-            aria-haspopup="dialog"
-            data-testid="video-open-week"
-            className="btn-3d btn-3d-soft flex h-12 w-full items-center justify-center rounded-btn text-[16px] font-extrabold"
-          >
-            Download Weekly Recap
-          </button>
-        </div>
-      </Card>
+    <VideoLauncher.Provider value={{ open: start }}>
+      {children}
 
       {open
         ? createPortal(
@@ -634,7 +610,52 @@ export function RecapVideo({ ctx }: { ctx: RecapContext }) {
             document.body,
           )
         : null}
-    </>
+    </VideoLauncher.Provider>
+  );
+}
+
+
+/** The Mission page card: opens the dialog on Monthly or Weekly. */
+export function RecapVideoCard() {
+  const video = useRecapVideo();
+  return (
+    <Card className="animate-rise relative isolate [animation-delay:120ms]" aria-labelledby="video-title" data-testid="video-card">
+      <Decor radius="card">
+        <span className="absolute -bottom-16 -left-14 size-52 rounded-full bg-[radial-gradient(circle,var(--accent-soft),transparent_70%)]" />
+      </Decor>
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[12px] font-bold tracking-[0.12em] text-muted uppercase">For Instagram Stories</p>
+          <h2 id="video-title" className="mt-1 text-[20px] leading-tight font-extrabold">
+            Recap video
+          </h2>
+          <p className="mt-1 text-[15px] text-muted">
+            Celebrate the squad&apos;s progress. Download and share this week&apos;s or this month&apos;s mission.
+          </p>
+        </div>
+        <Trophy3D className="-mt-1 size-14 shrink-0" />
+      </div>
+      <div className="mt-4 flex flex-col gap-3">
+        <button
+          type="button"
+          onClick={(e) => video?.open("month", e.currentTarget)}
+          aria-haspopup="dialog"
+          data-testid="video-open"
+          className="btn-3d btn-3d-brand flex h-12 w-full items-center justify-center rounded-btn text-[16px] font-extrabold"
+        >
+          Download Monthly Recap
+        </button>
+        <button
+          type="button"
+          onClick={(e) => video?.open("week", e.currentTarget)}
+          aria-haspopup="dialog"
+          data-testid="video-open-week"
+          className="btn-3d btn-3d-soft flex h-12 w-full items-center justify-center rounded-btn text-[16px] font-extrabold"
+        >
+          Download Weekly Recap
+        </button>
+      </div>
+    </Card>
   );
 }
 

@@ -7,6 +7,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   CopyIcon,
+  DownloadIcon,
   FlameIcon,
   PauseIcon,
   PlayIcon,
@@ -73,10 +74,13 @@ export function RecapPlayer({
   recap,
   ctx,
   onClose,
+  onVideo,
 }: {
   recap: ReadyRecap;
   ctx: RecapContext;
   onClose: () => void;
+  /** Opens the recap video export for this same period (absent: no video button). */
+  onVideo?: () => void;
 }) {
   const [scene, setScene] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -200,7 +204,7 @@ export function RecapPlayer({
       </div>
 
       {done ? (
-        <RecapSummary recap={recap} ctx={ctx} onReplay={replay} onClose={onClose} />
+        <RecapSummary recap={recap} ctx={ctx} onReplay={replay} onClose={onClose} onVideo={onVideo} />
       ) : (
         <>
           <div
@@ -517,11 +521,13 @@ function RecapSummary({
   ctx,
   onReplay,
   onClose,
+  onVideo,
 }: {
   recap: ReadyRecap;
   ctx: RecapContext;
   onReplay: () => void;
   onClose: () => void;
+  onVideo?: () => void;
 }) {
   const p: RecapPeriod = recap.period;
   const unit = p.kind === "week" ? "week" : "month";
@@ -632,6 +638,18 @@ function RecapSummary({
         >
           Back to Mission
         </button>
+        {onVideo ? (
+          <button
+            type="button"
+            onClick={onVideo}
+            aria-haspopup="dialog"
+            data-testid="recap-video"
+            className="btn-3d btn-3d-soft flex h-12 items-center justify-center gap-2 rounded-btn text-[15px] font-extrabold"
+          >
+            <DownloadIcon className="size-4" />
+            {p.kind === "week" ? "Download Weekly Recap Video" : "Download Monthly Recap Video"}
+          </button>
+        ) : null}
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"

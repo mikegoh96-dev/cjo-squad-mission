@@ -87,3 +87,4 @@ export const ReplayIcon = (p: IconProps) => (
 export const CopyIcon = (p: IconProps) => (
   <Svg {...p}><rect x="8.5" y="8.5" width="11" height="11" rx="2" /><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5" /></Svg>
 );
+export const DownloadIcon = (p: IconProps) => <Svg {...p}><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 19.5h14" /></Svg>;

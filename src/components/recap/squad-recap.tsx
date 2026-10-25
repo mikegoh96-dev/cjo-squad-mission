@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Crown3D } from "@/components/art/objects";
 import { AlertIcon, ClockIcon, RefreshIcon, XIcon } from "@/components/icons";
 import { RecapPlayer, type ReadyRecap, type RecapContext } from "@/components/recap/recap-player";
+import { useRecapVideo } from "@/components/recap/recap-video";
 import { Card, Decor } from "@/components/ui";
 import { type RecapKind, type RecapPeriod, computeRecap, makePeriod, recapPeriods } from "@/lib/recap";
 import { RecapLoadError, fetchRecapData } from "@/lib/recap-client";
@@ -31,6 +32,7 @@ export function SquadRecap({ ctx }: { ctx: RecapContext }) {
   const [openedAt, setOpenedAt] = useState(() => new Date(0));
   const [selected, setSelected] = useState<string | null>(null);
   const trigger = useRef<HTMLButtonElement>(null);
+  const video = useRecapVideo();
   const overlay = useRef<HTMLDivElement>(null);
   const abort = useRef<AbortController | null>(null);
   const slowTimer = useRef(0);
@@ -182,7 +184,21 @@ export function SquadRecap({ ctx }: { ctx: RecapContext }) {
             >
               {stage.name === "play" ? (
                 <div role="dialog" aria-modal="true" aria-label="Squad recap" className="h-dvh w-full">
-                  <RecapPlayer recap={stage.recap} ctx={ctx} onClose={close} />
+                  <RecapPlayer
+                    recap={stage.recap}
+                    ctx={ctx}
+                    onClose={close}
+                    onVideo={
+                      video
+                        ? () => {
+                            // Hand over to the video export for the same period; focus comes back to Generate Recap.
+                            const { kind, key } = stage.recap.period;
+                            close();
+                            video.open(kind, trigger.current, key);
+                          }
+                        : undefined
+                    }
+                  />
                 </div>
               ) : (
                 <div

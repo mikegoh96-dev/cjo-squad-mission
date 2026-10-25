@@ -142,8 +142,9 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
   Monthly (each campaign month that has started), with the exact period shown
   -> a ~22 s animated story (opening, squad performance, milestones, thank-you
   to the whole squad A–Z, next mission) with pause, back/next, skip to summary,
-  close (× / Escape) -> a summary card (Replay, Back to Mission, Share or Copy
-  summary: only what the browser supports). Periods are whole days in the
+  close (× / Escape) -> a summary card (Replay, Back to Mission, "Download
+  Weekly/Monthly Recap Video" (closes the recap and opens the recap video export
+  on the same period), Share or Copy summary: only what the browser supports). Periods are whole days in the
   campaign time zone, end exclusive: week = Monday 00:00 -> next Monday 00:00,
   month = 1st -> next 1st. Maths in `src/lib/recap.ts` (pure, unit-tested):
   cases = net of the recorded changes inside the period (never the current
@@ -158,7 +159,9 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
   `src/lib/recap-client.ts`) + `member_case_counts`. Without the function the
   card says "Recap isn't available yet". Reduced motion: no movement.
 - **Recap video** (Mission page, "Download Monthly Recap" / "Download Weekly
-  Recap"; `src/components/recap/recap-video.tsx`): Weekly (this week / last
+  Recap", or from the Squad Recap summary; `src/components/recap/recap-video.tsx`:
+  `RecapVideoProvider` (state + dialog, wraps both cards on the Mission page),
+  `useRecapVideo().open(kind, opener, periodKey?)`, `RecapVideoCard`): Weekly (this week / last
   week, as in the Squad Recap) or Monthly (each started campaign month);
   periods whose history doesn't add up are shown as "not enough history";
   preview, Generate Video, then Download Video / Share (file share, when the
