@@ -150,7 +150,6 @@ describe("computeRecap", () => {
     const r = ready(recap(week("2026-10-19"), events));
     assert.equal(r.casesAdded, 0);
     assert.equal(r.updates, 0);
-    assert.equal(r.contributors, 0);
     assert.equal(r.activeDays, 0);
     assert.deepEqual(r.milestones, []);
     assert.equal(r.months[0].progress.total, 9, "progress still shows where the month stands");
@@ -161,7 +160,7 @@ describe("computeRecap", () => {
     assert.equal(recapHeadline(done), "A quiet stretch for the squad");
   });
 
-  test("many increments and a correction add up to the net; contributors count rises only", () => {
+  test("many increments and a correction add up to the net", () => {
     const events = [
       ev("2026-10-19T09:00:00", 1, A),
       ev("2026-10-19T09:00:01", 1, A),
@@ -173,7 +172,6 @@ describe("computeRecap", () => {
     const r = ready(recap(week("2026-10-19"), events));
     assert.equal(r.casesAdded, 4);
     assert.equal(r.updates, 6);
-    assert.equal(r.contributors, 2, "A and C went up; B ended where they started");
     assert.equal(r.activeDays, 2, "Mon and Thu; Tue netted to zero");
     assert.deepEqual(
       r.days.map((d) => [d.date.slice(8), d.net, d.future]),

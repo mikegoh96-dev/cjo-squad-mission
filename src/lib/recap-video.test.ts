@@ -97,7 +97,6 @@ describe("buildVideoReport", () => {
     assert.equal(targetLine(r), "8 cases above target");
     assert.equal(resultLine(r), "October 2026 · 28 of 20 cases · 140%");
     assert.equal(r.fileBase, "CJO-Squad-Recap-October-2026");
-    assert.equal(r.contributors, 2);
     assert.equal(r.campaign?.total, 28);
     assert.equal(r.campaign?.target, 90);
   });
@@ -198,7 +197,6 @@ describe("buildVideoReport (weekly)", () => {
     assert.equal(r.periodLabel, "Mon 19 Oct – Sun 25 Oct 2026");
     assert.equal(r.status, "in-progress");
     assert.equal(r.added, 9, "net this week, never the month total (29)");
-    assert.equal(r.contributors, 3);
     assert.equal(r.activeDays, 3);
     assert.deepEqual(
       r.days.map((d) => [d.label, d.net, d.future]),
@@ -235,7 +233,6 @@ describe("buildVideoReport (weekly)", () => {
     const quiet = weekly([ev("2026-10-05T10:00:00", 4)], "2026-10-19", NOW)!;
     assert.equal(quiet.added, 0);
     assert.equal(quiet.activeDays, 0);
-    assert.equal(quiet.contributors, 0);
     assert.equal(quiet.shareOfTarget, null);
     assert.equal(quiet.months[0].total, 4);
     assert.equal(resultLine(quiet), "Week of 19 Oct 2026 · 0 cases together");

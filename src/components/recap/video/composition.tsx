@@ -391,9 +391,6 @@ function opening(ctx: Ctx, r: VideoReport, a: VideoAssets, t: number) {
   });
   withAlpha(ctx, phase(t, 900, 500), () => {
     text(ctx, a, r.periodLabel, 540, 1350, { size: 48, weight: 700, color: C.muted, maxWidth: 940 });
-    if (r.status === "in-progress") {
-      pill(ctx, a, r.kind === "month" ? "MONTH IN PROGRESS" : "WEEK IN PROGRESS", 540, 1460, C.flameSoft, C.flameText, 32);
-    }
   });
 }
 
@@ -603,7 +600,7 @@ function momentum(ctx: Ctx, r: VideoReport, a: VideoAssets, t: number) {
   const stats: [string, string][] = [
     [formatDelta(r.added), `${Math.abs(r.added) === 1 ? "case" : "cases"} added together ${when(r)}`],
   ];
-  if (r.contributors > 0) stats.push([String(r.contributors), r.contributors === 1 ? "teammate added cases" : "teammates added cases"]);
+  // Never show how many (or which) teammates added cases: it can single someone out.
   if (r.activeDays > 0) stats.push([String(r.activeDays), r.activeDays === 1 ? "day with cases added" : "days with cases added"]);
 
   stats.forEach(([value, label], i) => {
@@ -621,7 +618,7 @@ function momentum(ctx: Ctx, r: VideoReport, a: VideoAssets, t: number) {
 
   if (r.campaign) {
     const c = r.campaign;
-    const y = 1270;
+    const y = 560 + stats.length * 230 + 30; // right under the last stat card
     const p = easeOut(phase(t, 900, 600));
     withAlpha(ctx, p, () => {
       card(ctx, a, 120, y, 840, 300, 60, brand(ctx, 120, y, 840, 300), C.heroLip, "rgba(61,95,224,0.45)");

@@ -50,7 +50,6 @@ type VideoCommon = {
   added: number;
   /** Milestones first reached during the period, in the order they were reached. */
   milestones: { key: MilestoneKey; label: string; cases: number; monthLabel: string }[];
-  contributors: number;
   activeDays: number;
   /** Whole-campaign progress at the end of the period (or now); null if unavailable. */
   campaign: { name: string; total: number; target: number; percent: number; meterPercent: number; complete: boolean } | null;
@@ -115,7 +114,6 @@ export function buildVideoReport(recap: Recap, campaignName: string): VideoRepor
     status: p.status,
     added: recap.casesAdded,
     milestones: recap.milestones.map((m) => ({ key: m.key, label: m.label, cases: m.cases, monthLabel: m.monthLabel })),
-    contributors: recap.contributors,
     activeDays: recap.activeDays,
     campaign: recap.campaign
       ? {

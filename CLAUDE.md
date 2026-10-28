@@ -6,6 +6,8 @@ Collective squad progress app. **The squad succeeds together.** Members report
 their monthly case count only to show their contribution to the shared squad
 target. Never build individual rankings, leaderboards, member-vs-member or
 squad-vs-squad comparisons. The primary metric is collective squad progress.
+Recaps and videos never show how many (or which) teammates did or didn't add
+cases, and never a prominent "in progress" label: either can single someone out.
 
 The database stores case **counts** only. Never store client names, NRIC,
 policy numbers, premiums, medical, product or financial-planning data.
@@ -149,10 +151,10 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
   campaign time zone, end exclusive: week = Monday 00:00 -> next Monday 00:00,
   month = 1st -> next 1st. Maths in `src/lib/recap.ts` (pure, unit-tested):
   cases = net of the recorded changes inside the period (never the current
-  total), progress = the month total replayed to the period's end, teammates =
-  members whose count rose overall in the period (a count only, no names or
-  numbers per person), milestones = first time each was reached (re-crossing
-  after a correction never counts again; thresholds use the current target).
+  total), progress = the month total replayed to the period's end, active
+  days = days with net cases added, milestones = first time each was reached
+  (re-crossing after a correction never counts again; thresholds use the
+  current target). No per-teammate or teammate-count figure is computed.
   If the recorded history doesn't add up to the stored totals, the recap
   refuses ("Not enough history") rather than guess. Data: the anon function
   `squad_recap_history(squad, campaign, until)` (migration

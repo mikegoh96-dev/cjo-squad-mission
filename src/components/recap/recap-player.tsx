@@ -14,7 +14,6 @@ import {
   ReplayIcon,
   ShareIcon,
   SkipIcon,
-  UsersIcon,
   XIcon,
 } from "@/components/icons";
 import { Avatar, Meter } from "@/components/ui";
@@ -294,11 +293,6 @@ function Scene({ id, recap, ctx, reduced }: { id: (typeof SCENES)[number]["id"];
           <p className="mt-3 text-[16px] font-semibold text-white/85">
             {p.title} · {p.rangeLabel}
           </p>
-          {p.status === "in-progress" ? (
-            <p className="mt-3 inline-flex rounded-full bg-white/15 px-3 py-1 text-[13px] font-bold">
-              The {unit} isn&apos;t over yet: this is our story so far
-            </p>
-          ) : null}
         </div>
       </>
     );
@@ -359,20 +353,13 @@ function Scene({ id, recap, ctx, reduced }: { id: (typeof SCENES)[number]["id"];
           </p>
         ) : null}
 
-        {recap.contributors > 0 || recap.activeDays > 0 ? (
+        {/* Never show how many (or which) teammates added cases: it can single someone out. */}
+        {recap.activeDays > 0 ? (
           <div className="mt-3 flex flex-wrap justify-center gap-2">
-            {recap.contributors > 0 ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[13px] font-bold">
-                <UsersIcon className="size-4" />
-                {recap.contributors} {recap.contributors === 1 ? "teammate" : "teammates"} added cases
-              </span>
-            ) : null}
-            {recap.activeDays > 0 ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[13px] font-bold">
-                <FlameIcon className="size-4" />
-                Cases added on {recap.activeDays} {recap.activeDays === 1 ? "day" : "days"}
-              </span>
-            ) : null}
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[13px] font-bold">
+              <FlameIcon className="size-4" />
+              Cases added on {recap.activeDays} {recap.activeDays === 1 ? "day" : "days"}
+            </span>
           </div>
         ) : null}
 
@@ -570,9 +557,8 @@ function RecapSummary({
           {p.status === "in-progress" ? " · in progress" : " · completed"}
         </p>
 
-        <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
+        <dl className="mt-4 grid grid-cols-2 gap-2 text-center">
           <Stat label={`Cases this ${unit}`} value={formatDelta(recap.casesAdded)} testId="recap-summary-cases" />
-          <Stat label="Teammates added" value={String(recap.contributors)} />
           <Stat label="Active days" value={String(recap.activeDays)} />
         </dl>
 

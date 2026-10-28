@@ -81,8 +81,6 @@ export type Recap =
       casesAdded: number;
       /** Number of recorded changes in the period. */
       updates: number;
-      /** Teammates whose count went up overall in the period. */
-      contributors: number;
       /** Days in the period with cases added (net > 0). */
       activeDays: number;
       days: RecapDay[];
@@ -304,10 +302,6 @@ export function computeRecap(input: {
     };
   });
 
-  const net = new Map<string, number>();
-  for (const e of inPeriod) net.set(e.squadMemberId, (net.get(e.squadMemberId) ?? 0) + e.delta);
-  const contributors = [...net.values()].filter((n) => n > 0).length;
-
   const today = todayIn(period.timeZone, new Date(Math.min((input.now ?? new Date()).getTime(), end - 1)));
   const days: RecapDay[] = [];
   for (let d = period.startDate; d < period.endDate; d = addDays(d, 1)) {
@@ -360,7 +354,6 @@ export function computeRecap(input: {
     period,
     casesAdded: inPeriod.reduce((sum, e) => sum + e.delta, 0),
     updates: inPeriod.length,
-    contributors,
     activeDays: days.filter((d) => d.net > 0).length,
     days,
     months,
