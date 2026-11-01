@@ -13,7 +13,10 @@ secret values here.
 - November PC$ challenge seed: `supabase/migrations/20261101090100_pc_challenge_nov_2026.sql`
   (`pc-nov-2026`: target $182,972 incl. growth, minimum $5,000, production
   1–30 Nov 2026, entries until 30 Nov 23:59:59 Singapore time; checked by
-  `06_campaign_seed.test.sql`). Needs `20261101090000_pc_challenge.sql` first.
+  `06_campaign_seed.test.sql`). Both PC$ migrations
+  (`20261101090000_pc_challenge`, `20261101090100_pc_challenge_nov_2026`) are
+  applied (SQL editor, 2026-11-01, comment-free paste; recorded in
+  `supabase_migrations.schema_migrations`); live cards and Mission card verified.
 - Policy values in `private.notify_policy` may have been tuned in the SQL editor;
   check the live row before copying values elsewhere.
 
