@@ -6,7 +6,7 @@ let client: SupabaseClient<Database> | null = null;
 
 /**
  * Browser Supabase client: Realtime (live updates) plus a few small anon
- * reads (recent cheers, this phone's check-in and alert settings) that must
+ * reads (this phone's alert settings, recap history) that must
  * not queue behind card saves. Publishable key, no session: it can do only
  * what the anon role may do. All writes go through the server.
  */

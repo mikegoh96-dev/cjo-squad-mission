@@ -144,7 +144,7 @@ Skip this section at first if you like. The app works fully without it, and the 
 Push gives your squad:
 - grouped "Ben added 2 cases" alerts;
 - milestone and almost-there alerts;
-- gentle check-in reminders;
+- PC$ updates and milestones (when a PC$ challenge is set up);
 - a Monday recap.
 
 There are no alerts during quiet hours (10pm–8am).

@@ -22,6 +22,9 @@ insert into public.monthly_targets (campaign_id, month, target_cases)
 -- -----------------------------------------------------------------------------
 -- Fixture
 -- -----------------------------------------------------------------------------
+-- Reminders are off in this deployment (reminder_cap = 0); the machinery is
+-- still tested with the original policy.
+update private.notify_policy set reminder_cap = 3 where id;
 delete from private.notification_jobs;
 delete from private.notification_activity_items;
 delete from private.notification_milestones;

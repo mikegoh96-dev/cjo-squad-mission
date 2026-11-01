@@ -38,8 +38,9 @@ monthly milestones (first case, 50%, 75%, target) with a short celebration;
 one big card per member (A–Z) on the dashboard with -/+ to update their
 count for the open month. Mobile-first. Push notifications (added 2026-10-07;
 V2 on 2026-10-14 at the owner's request, see below): consolidated squad
-activity, shared milestones + one rally, private monthly check-in reminders,
-a Monday recap; an in-app cheer panel; a monthly check-in. A Squad Recap
+activity, shared milestones + one rally, a Monday recap (the check-in card,
+its reminders and the cheer panel were removed on 2026-11-02 at the owner's
+request; see below). A Squad Recap
 and a downloadable weekly / monthly recap video for Instagram Stories (added
 2026-10-24/25 at the owner's request, Mission page only; see below).
 Anything else
@@ -117,17 +118,16 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
     a "How squad alerts work" card. `public/sw.js` shows
     `{title, body, tag, url}` and opens the url (milestones/rally/recap
     `/mission`, reminders `/?checkin=1`).
-  - **Check-in** (`src/components/checkin/checkin-card.tsx`, `member_checkins`):
-    "Which card is yours?" is remembered on the phone (`src/lib/me.ts`,
-    localStorage) and synced to the phone's subscription
-    (`set_push_device_member`) for reminder routing; it is NOT identity. Only
-    that member's card shows "You" and the Check in control ("Confirm 0 cases"
-    works); `confirm_checkin` must match the stored count and cancels queued
-    reminders. There is no list of who has or hasn't checked in.
-  - **Cheers** (`src/components/cheers/cheer-panel.tsx`, `send_cheer`,
-    `public.squad_cheers`): 4 presets, anonymous (no member/device stored),
-    rate-limited (per browser hash + squad-wide), never pushed, kept 2 days,
-    live via Realtime (polling every 8 s as fallback).
+  - **Removed 2026-11-02 (owner's decision): the monthly check-in card
+    ("Which card is yours?", "Confirm 0 cases", the "You" chip, the phone-to-
+    member link and the "My check-in reminders" toggle) and the cheer panel.**
+    Migration `20261103090000_checkin_reminders_off.sql` sets
+    `notify_policy.reminder_cap = 0` (the planner queues no reminders) and
+    cancelled queued ones. The database side is kept but unused:
+    `member_checkins`, `confirm_checkin` / `get_checkin`,
+    `set_push_device_member`, `checkin_reminders`, `send_cheer`,
+    `squad_cheers`, `cheer_log`, `pref_reminders`. Bringing either back means a
+    new screen (and `reminder_cap` 1-3 for reminders).
   Manifest `src/app/manifest.ts`, icons in `public/` + `src/app/apple-icon.png`.
   Without the push env vars the card is hidden and nothing is sent.
 - **PC$ challenge** (added 2026-11-01 at the owner's request; migration
@@ -245,8 +245,7 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
 **Security trade-off (accepted for a trusted internal team tool):** because
 there is no authentication, the system **cannot prove who submitted a count**.
 Anyone with the link can pick any name and change that member's current-month
-total, confirm that member's check-in, or link a phone to them (reminder
-routing only; a phone link is never proof of who holds it). Mitigations:
+total or PC$ amount. Mitigations:
 - the only write path is `submit_case_count(member, count, expected)`; no table
   is writable by the browser roles;
 - only existing squad members, only the open month (campaign time zone), only
@@ -288,8 +287,7 @@ The `(dashboard)` route group holds `/`, `/mission` and `/settings` with their
 | `src/lib/supabase/browser.ts` | Browser client for Realtime only (publishable key) |
 | `src/lib/push/` | `jobs.ts` (V2 wording, error classes, runner), `message.ts` + `deliver.ts` (legacy direct send), `endpoint.ts` (allowed push hosts) — unit-tested; `server.ts` (server-only: config, web-push, `runNotifications`, `notifyAfterSave`, legacy `notifyCasesAdded`, `sendWelcome`); `client.ts` (support check, SW registration, VAPID key); `policy.ts` (quiet-hours / recap labels for the UI, from `squadConfig.notifications`) |
 | `src/app/api/notify/run/route.ts` | Scheduler endpoint (Bearer `CRON_SECRET`) |
-| `src/app/(dashboard)/squad-actions.ts` | Check-in, phone link/preferences, cheers (Server Actions) |
-| `src/lib/me.ts`, `src/lib/cheers.ts` | This phone's member (localStorage store); cheer keys |
+| `src/app/(dashboard)/squad-actions.ts` | This phone's notification preferences (Server Action) |
 | `src/lib/recap.ts`, `src/lib/recap-client.ts`, `src/components/recap/` | Squad Recap: periods + metrics (unit-tested), browser read, entry card / picker / player / summary |
 | `src/lib/recap-video.ts`, `src/components/recap/recap-video.tsx`, `src/components/recap/video/` | Weekly / monthly recap video: report + timeline (unit-tested), export dialog, canvas composition, MP4 encoder / PNG fallback |
 | `src/lib/app-version.ts`, `src/components/app-update.tsx`, `src/app/api/version/route.ts` | Self-update for Home Screen apps (see "App updates") |

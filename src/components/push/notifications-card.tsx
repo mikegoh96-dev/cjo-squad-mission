@@ -3,11 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { disablePush, enablePush } from "@/app/(dashboard)/push-actions";
-import { linkDevice, saveDevicePrefs } from "@/app/(dashboard)/squad-actions";
+import { saveDevicePrefs } from "@/app/(dashboard)/squad-actions";
 import { Bell3D } from "@/components/art/objects";
 import { BellIcon, GearIcon, ShareIcon } from "@/components/icons";
 import { Decor } from "@/components/ui";
-import { getMe, setMe, useMe } from "@/lib/me";
 import { type DevicePrefs, type DeviceSettings, fetchDeviceSettings } from "@/lib/notify-client";
 import { type PushSupport, pushSupport, registerServiceWorker, vapidKeyBytes } from "@/lib/push/client";
 import { QUIET_HOURS_LABEL, RECAP_LABEL } from "@/lib/push/policy";
@@ -21,21 +20,18 @@ const serverSupport = (): PushSupport => "unsupported";
 
 /**
  * Opt in to push notifications on this phone (squad activity, milestones,
- * weekly recap, and this phone's member's check-in reminders), then choose
- * which ones. iPhone: only apps added to the Home Screen can get
- * notifications, so it shows how to install first. The phone is anonymous
- * unless someone picks "Which card is yours?" (routing only, not identity).
+ * weekly recap), then choose which ones. iPhone: only apps added to the Home
+ * Screen can get notifications, so it shows how to install first. The phone
+ * stays anonymous.
  *
  * place="squad": only the "Turn on" prompt (plus a short confirmation right
  * after turning on). place="settings": status, Turn off and the alert toggles.
  */
 export function NotificationsCard({
   vapidPublicKey,
-  memberNames,
   place,
 }: {
   vapidPublicKey: string | null;
-  memberNames: Record<string, string>;
   place: "squad" | "settings";
 }) {
   const support = useSyncExternalStore(noSubscribe, pushSupport, serverSupport);
@@ -43,7 +39,6 @@ export function NotificationsCard({
   const [subscription, setSubscription] = useState<PushSubscription | null>(null);
   // null = not loaded or the V2 settings aren't available (then hidden).
   const [settings, setSettings] = useState<DeviceSettings | null>(null);
-  const me = useMe();
   const [justEnabled, setJustEnabled] = useState(false);
   const endpoint = view === "on" ? (subscription?.endpoint ?? null) : null;
 
@@ -53,29 +48,12 @@ export function NotificationsCard({
     let cancelled = false;
     void fetchDeviceSettings(endpoint).then((found) => {
       if (cancelled || !found || found === "off") return;
-      // Storage was cleared but the phone was linked before: remember it again.
-      if (found.memberId && getMe() === null) setMe(found.memberId);
       setSettings(found);
     });
     return () => {
       cancelled = true;
     };
   }, [endpoint]);
-
-  // Keep the server's link (where reminders go) in step with "Which card is yours?".
-  const linked = settings?.memberId ?? null;
-  useEffect(() => {
-    if (!endpoint || !settings || linked === me) return;
-    let cancelled = false;
-    linkDevice(endpoint, me)
-      .catch(() => null)
-      .then((result) => {
-        if (!cancelled && result?.ok) setSettings((s) => (s ? { ...s, memberId: me } : s));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [endpoint, settings, linked, me]);
 
   async function changePref(key: keyof DevicePrefs, value: boolean) {
     if (!endpoint || !settings) return;
@@ -189,13 +167,6 @@ export function NotificationsCard({
             <ul className="mt-1 space-y-1">
               <Toggle label="Squad activity" hint="New cases, grouped into one alert" checked={settings.prefs.activity} onChange={(v) => changePref("activity", v)} />
               <Toggle label="Milestones & rally" hint="Halfway, almost there, target hit" checked={settings.prefs.milestones} onChange={(v) => changePref("milestones", v)} />
-              <Toggle
-                label="My check-in reminders"
-                hint={me && memberNames[me] ? `Only to this phone, for ${memberNames[me]}` : "Pick your card on the Squad tab first"}
-                checked={settings.prefs.reminders && Boolean(me)}
-                disabled={!me}
-                onChange={(v) => changePref("reminders", v)}
-              />
               <Toggle label="Weekly recap" hint={RECAP_LABEL} checked={settings.prefs.recap} onChange={(v) => changePref("recap", v)} />
             </ul>
             <p className="mt-2 text-[12px] font-medium text-muted">
