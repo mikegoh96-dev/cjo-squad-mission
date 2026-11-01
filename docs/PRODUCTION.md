@@ -17,6 +17,9 @@ secret values here.
   (`20261101090000_pc_challenge`, `20261101090100_pc_challenge_nov_2026`) are
   applied (SQL editor, 2026-11-01, comment-free paste; recorded in
   `supabase_migrations.schema_migrations`); live cards and Mission card verified.
+- PC$ notifications: `20261102090000_pc_notifications` applied (SQL editor,
+  2026-11-02, comment-free paste; `pc_enqueue` present; 0 minimums already met,
+  so every member's first $5,000 crossing is announced).
 - Policy values in `private.notify_policy` may have been tuned in the SQL editor;
   check the live row before copying values elsewhere.
 
