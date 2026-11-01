@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import { ArtDefs } from "@/components/art/art-defs";
 import { SplashScreen } from "@/components/splash-screen";
 import { siteConfig } from "@/config/site";
+import { squadConfig } from "@/config/squad";
 import "./globals.css";
 
 // Geometric, rounded and bold at large sizes: playful but professional.
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
   description: siteConfig.description,
   applicationName: siteConfig.name,
   // Installable to the Home Screen (required on iPhone for push notifications).
-  appleWebApp: { capable: true, title: "CJO Squad", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: squadConfig.shortName, statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

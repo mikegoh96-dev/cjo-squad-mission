@@ -23,6 +23,7 @@ import {
   sceneAt,
   targetLine,
 } from "@/lib/recap-video";
+import { squadConfig } from "@/config/squad";
 
 type Art = "trophy" | "medal" | "star" | "bolt" | "gem";
 export type VideoAssets = {
@@ -379,7 +380,7 @@ function opening(ctx: Ctx, r: VideoReport, a: VideoAssets, t: number) {
     }),
   );
   withAlpha(ctx, phase(t, 350, 400), () =>
-    text(ctx, a, "CJO SQUAD MISSION", 540, 990, { size: 40, color: C.accent, spacing: 8 }),
+    text(ctx, a, squadConfig.appName.toUpperCase(), 540, 990, { size: 40, color: C.accent, spacing: 8 }),
   );
   const rise = easeOut(phase(t, 500, 600));
   withAlpha(ctx, rise, () => {
@@ -674,7 +675,7 @@ function closing(ctx: Ctx, r: VideoReport, a: VideoAssets, t: number, ms: number
     pill(ctx, a, resultLine(r), 540, 1340, "#ffffff", C.accentStrong, 38);
     // Footer: logo + name, centred as one group.
     ctx.font = font(a, 36, 800);
-    const name = "CJO Squad Mission";
+    const name = squadConfig.appName;
     const left = 540 - (72 + 18 + ctx.measureText(name).width) / 2;
     ctx.save();
     roundRect(ctx, left, 1455, 72, 72, 20);

@@ -13,7 +13,7 @@ export type PushMessage = {
 
 const MILESTONE_EMOJI = { started: "⭐", halfway: "🏅", momentum: "⚡", cleared: "🏆" } as const;
 
-/** Someone added cases: "🎉 Cynthia added 2 cases" / a milestone headline. */
+/** Someone added cases: "🎉 Ben added 2 cases" / a milestone headline. */
 export function casesAddedMessage(input: {
   squadMemberId: string;
   name: string;

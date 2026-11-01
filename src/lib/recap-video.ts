@@ -4,6 +4,7 @@
 // numbers. All statistics come from computeRecap (src/lib/recap.ts).
 import { type MilestoneKey, formatDelta } from "./mission.ts";
 import { type Recap, weekdayShort } from "./recap.ts";
+import { squadConfig } from "../config/squad.ts";
 
 /** Output format: Instagram Stories (9:16). Fixed here, never taken from the browser. */
 export const VIDEO = { width: 1080, height: 1920, fps: 30 } as const;
@@ -53,7 +54,7 @@ type VideoCommon = {
   activeDays: number;
   /** Whole-campaign progress at the end of the period (or now); null if unavailable. */
   campaign: { name: string; total: number; target: number; percent: number; meterPercent: number; complete: boolean } | null;
-  /** e.g. "CJO-Squad-Recap-October-2026" (add .mp4 / .png). */
+  /** e.g. "CJO-Squad-Recap-October-2026" (`squadConfig.fileSlug`; add .mp4 / .png). */
   fileBase: string;
 };
 
@@ -149,7 +150,7 @@ export function buildVideoReport(recap: Recap, campaignName: string): VideoRepor
       days: recap.days.map((d) => ({ label: weekdayShort(d.date), net: d.net, future: d.future })),
       shareOfTarget:
         single && single.shareOfTarget !== null ? { percent: single.shareOfTarget, monthLabel: single.label } : null,
-      fileBase: safeName(`CJO-Squad-Recap-Week-of-${day}-${mon}-${p.startDate.slice(0, 4)}`),
+      fileBase: safeName(`${squadConfig.fileSlug}-Week-of-${day}-${mon}-${p.startDate.slice(0, 4)}`),
     };
   }
 
@@ -176,7 +177,7 @@ export function buildVideoReport(recap: Recap, campaignName: string): VideoRepor
     complete: target !== null && total >= target,
     exceededBy: target !== null ? Math.max(0, total - target) : 0,
     remaining: target !== null ? Math.max(0, target - total) : 0,
-    fileBase: safeName(`CJO-Squad-Recap-${monthLabel}-${year}`),
+    fileBase: safeName(`${squadConfig.fileSlug}-${monthLabel}-${year}`),
   };
 }
 

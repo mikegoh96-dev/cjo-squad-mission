@@ -1,5 +1,7 @@
+import { squadConfig } from "./squad.ts";
+
 export const siteConfig = {
-  name: "CJO Squad Mission",
-  tagline: "One team. One target.",
-  description: "One team. One target. Our squad's collective mission progress.",
+  name: squadConfig.appName,
+  tagline: squadConfig.tagline,
+  description: squadConfig.description,
 } as const;

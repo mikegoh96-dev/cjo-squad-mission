@@ -30,7 +30,7 @@ export type DeliveryResult = { id: string; outcome: Outcome; code: number | null
 
 const MILESTONE_EMOJI: Record<MilestoneKey, string> = { started: "⭐", halfway: "🏅", momentum: "⚡", cleared: "🏆" };
 
-/** "Cynthia", "Cynthia and Jamie", "Claire, Cynthia and Jamie", "A, B, C and 2 more". */
+/** "Ben", "Ben and Daniel", "Aisha, Ben and Daniel", "A, B, C and 2 more". */
 export function joinNames(names: string[]): string {
   if (names.length <= 1) return names[0] ?? "";
   if (names.length <= 4) return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;

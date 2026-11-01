@@ -1,7 +1,7 @@
 -- Public read access and shared-link update tests. Run with: npx supabase test db
 --
 -- Fixture (rolled back): a campaign covering the CURRENT month (so the test is
--- independent of the date), squad Alpha (Mike, Jeremy), squad Bravo (Sarah).
+-- independent of the date), squad Alpha (Marcus, Jeremy), squad Bravo (Sarah).
 begin;
 create extension if not exists pgtap with schema extensions;
 select plan(51);
@@ -18,7 +18,7 @@ insert into public.monthly_targets (campaign_id, month, target_cases) values (
 );
 
 insert into public.members (id, display_name) values
-  ('00000000-0000-0000-0000-00000000000a', 'Mike'),
+  ('00000000-0000-0000-0000-00000000000a', 'Marcus'),
   ('00000000-0000-0000-0000-00000000000b', 'Jeremy'),
   ('00000000-0000-0000-0000-00000000000c', 'Sarah');
 insert into public.squads (id, name) values
@@ -50,7 +50,7 @@ set local role anon;
 select results_eq($$select name from public.squads order by name$$, $$values ('Alpha'), ('Bravo')$$,
   'anon can read squads');
 select results_eq($$select display_name from public.members order by display_name$$,
-  $$values ('Jeremy'), ('Mike'), ('Sarah')$$, 'anon can read member names (for the name picker)');
+  $$values ('Jeremy'), ('Marcus'), ('Sarah')$$, 'anon can read member names (for the name picker)');
 select is((select count(*)::int from public.squad_members), 3, 'anon can read squad membership');
 select is((select count(*)::int from public.monthly_targets), 1, 'anon can read campaign targets');
 select results_eq(
@@ -87,13 +87,13 @@ select throws_ok($$delete from public.case_update_history$$, '42501', null,
 select results_eq(
   $$select status, case_count, previous_count
     from public.submit_case_count('20000000-0000-0000-0000-00000000000a', 6, 0)$$,
-  $$values ('saved'::text, 6, 0)$$, 'Mike''s count is set to 6');
+  $$values ('saved'::text, 6, 0)$$, 'Marcus''s count is set to 6');
 select results_eq(
   $$select status, case_count from public.submit_case_count('20000000-0000-0000-0000-00000000000a', 6, 0)$$,
   $$values ('unchanged'::text, 6)$$, 'a double-tapped submit of 6 reports unchanged (no double counting)');
 select results_eq(
   $$select status, case_count from public.submit_case_count('20000000-0000-0000-0000-00000000000a', 7)$$,
-  $$values ('saved'::text, 7)$$, 'Mike''s total is updated to 7');
+  $$values ('saved'::text, 7)$$, 'Marcus''s total is updated to 7');
 select results_eq(
   $$select squad_member_id, case_count from counts_now order by squad_member_id$$,
   $$values ('20000000-0000-0000-0000-00000000000a'::uuid, 7),
@@ -157,7 +157,7 @@ select throws_ok($$select public.submit_case_count('not-a-uuid', 5)$$, '22P02', 
 select results_eq(
   $$select today, this_week from public.squad_momentum('10000000-0000-0000-0000-00000000000a')$$,
   $$values (11, 11)$$,
-  'Alpha momentum: +11 today and this week (Jeremy +4, Mike +7; the 8-day-old +2 is excluded)');
+  'Alpha momentum: +11 today and this week (Jeremy +4, Marcus +7; the 8-day-old +2 is excluded)');
 select results_eq(
   $$select today, this_week from public.squad_momentum('10000000-0000-0000-0000-00000000000b')$$,
   $$values (3, 3)$$,
@@ -175,7 +175,7 @@ select results_eq(
     from public.squad_member_momentum('10000000-0000-0000-0000-00000000000a') order by squad_member_id$$,
   $$values ('20000000-0000-0000-0000-00000000000a'::uuid, 7, 7),
            ('20000000-0000-0000-0000-00000000000b'::uuid, 4, 4)$$,
-  'Alpha per member: Mike +7, Jeremy +4 (his 8-day-old +2 is excluded)');
+  'Alpha per member: Marcus +7, Jeremy +4 (his 8-day-old +2 is excluded)');
 select is(
   (select sum(this_week)::int from public.squad_member_momentum('10000000-0000-0000-0000-00000000000a')),
   (select this_week from public.squad_momentum('10000000-0000-0000-0000-00000000000a')),

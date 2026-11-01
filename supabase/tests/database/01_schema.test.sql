@@ -1,7 +1,7 @@
 -- Schema, privileges and data-integrity tests. Run with: npx supabase test db
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(34);
+select plan(33);
 
 -- ---------------------------------------------------------------------------
 -- Tables, RLS and the derived progress view
@@ -120,13 +120,18 @@ select is(
 -- ---------------------------------------------------------------------------
 -- Campaign configuration is stored as data
 -- ---------------------------------------------------------------------------
-select results_eq(
-  $$select t.month, t.target_cases from public.monthly_targets t
-    join public.campaigns c on c.id = t.campaign_id
-    where c.slug = 'q4-2026' order by t.month$$,
-  $$values (date '2026-10-01', 20), (date '2026-11-01', 30), (date '2026-12-01', 40)$$,
-  'Q4 2026 targets are 20 / 30 / 40'
-);
+-- The q4-2026 campaign (Oct-Dec 2026; 20 / 30 / 40) is the test fixture. A
+-- deployment's own campaign seed may differ, so create it when missing
+-- (rolled back with everything else).
+insert into public.campaigns (slug, name, starts_on, ends_on)
+  values ('q4-2026', 'Test campaign Q4 2026', '2026-10-01', '2026-12-31')
+  on conflict (slug) do nothing;
+insert into public.monthly_targets (campaign_id, month, target_cases)
+  select c.id, t.month, t.target_cases from public.campaigns c
+  cross join (values (date '2026-10-01', 20), (date '2026-11-01', 30), (date '2026-12-01', 40))
+    as t (month, target_cases)
+  where c.slug = 'q4-2026'
+  on conflict (campaign_id, month) do nothing;
 select col_default_is('public', 'campaigns', 'time_zone', 'Asia/Singapore',
   'campaign months resolve in the campaign time zone (data)');
 select throws_ok(
@@ -139,7 +144,7 @@ select throws_ok(
 -- Case-count integrity (direct writes as the table owner)
 -- ---------------------------------------------------------------------------
 insert into public.members (id, display_name)
-  values ('aaaaaaaa-0000-0000-0000-000000000001', 'Mike');
+  values ('aaaaaaaa-0000-0000-0000-000000000001', 'Marcus');
 insert into public.squads (id, name)
   values ('bbbbbbbb-0000-0000-0000-000000000001', 'Test Squad');
 insert into public.squad_members (id, squad_id, member_id) values

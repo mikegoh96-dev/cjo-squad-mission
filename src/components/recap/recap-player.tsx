@@ -19,6 +19,7 @@ import {
 import { Avatar, Meter } from "@/components/ui";
 import { type MilestoneKey, formatDelta, pluralCases } from "@/lib/mission";
 import { type Recap, type RecapKind, type RecapPeriod, recapHeadline, recapSummaryText, weekdayShort } from "@/lib/recap";
+import { squadConfig } from "@/config/squad";
 
 export type ReadyRecap = Extract<Recap, { state: "ready" }>;
 
@@ -537,7 +538,7 @@ function RecapSummary({
   };
   const share = async () => {
     try {
-      await navigator.share({ title: "CJO Squad Recap", text });
+      await navigator.share({ title: squadConfig.recapTitle, text });
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") return; // closed the share sheet
       if (canCopy) await copy();

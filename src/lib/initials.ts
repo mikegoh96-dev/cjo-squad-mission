@@ -13,9 +13,9 @@ function candidates(name: string): string[] {
     out.push(first[0] + last[0]);
     for (const ch of last.slice(1)) out.push(first[0] + ch);
   } else if (first.length <= 2) {
-    out.push(first); // "JY" stays "JY"
+    out.push(first); // "KJ" stays "KJ"
   } else {
-    // First letter + first consonant after it: Jamie -> JM, Jasmine -> JS, Mike -> MK.
+    // First letter + first consonant after it: Jenny -> JN, Jessica -> JS, Marcus -> MR.
     const consonant = [...first.slice(1)].find((ch) => /[A-Z]/.test(ch) && !VOWELS.has(ch));
     if (consonant) out.push(first[0] + consonant);
   }

@@ -87,7 +87,7 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
     suppressed); thresholds already met before a batch (lowered target) are
     recorded silently. Reminders: one slot at a time in `checkin_reminders`
     (PK + `seq between 1 and 3`), only to phones linked to that member, from
-    `reminders_from` (2026-11-01), never planned into the next month. Recap:
+    `reminders_from` (per deployment), never planned into the next month. Recap:
     previous Mon–Sun net change from history + milestones; empty or >24 h late
     = cancelled.
   - **Claim / complete** `notify_claim(secret, n)` (`for update skip locked`,
@@ -182,8 +182,8 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
   closes the encoder. No H.264 encoder (e.g. Firefox, open-source Chromium) ->
   "Create image (PNG)" of the closing frame, labelled as a still image. Nothing
   is uploaded or stored; no server rendering. File:
-  `CJO-Squad-Recap-<Month>-<Year>.mp4` or `CJO-Squad-Recap-Week-of-<D>-<Mon>-<Year>.mp4`
-  (`.png` for the still).
+  `<fileSlug>-<Month>-<Year>.mp4` or `<fileSlug>-Week-of-<D>-<Mon>-<Year>.mp4`
+  (`squadConfig.fileSlug`, e.g. `CJO-Squad-Recap`; `.png` for the still).
 - **App updates** (Home Screen apps resume old copies and have no reload or
   pull-to-refresh): `next.config.ts` stamps each build with `APP_VERSION`
   (Vercel deployment id); `/api/version` returns the live one (no-store).
@@ -232,13 +232,14 @@ The `(dashboard)` route group holds `/`, `/mission` and `/settings` with their
 | `src/lib/board.ts` | Tap clamping, cheers, optimistic totals (unit-tested) |
 | `src/lib/mission.ts` | Pure mission maths: progress %, status, milestones, celebration, momentum, messages (unit-tested) |
 | `src/lib/progress.ts` | Campaign/month phases, focus month, month filtering, contributions (unit-tested) |
-| `src/lib/avatars.ts` | Avatar art per member, by display name: Mike and JY = man, Claire, Cynthia, Jamie, Jasmine = woman (unit-tested); add new members here. Art: `src/components/art/person.tsx`, original stylised 3D-cartoon busts (materials `art-av-*` in `art-defs.tsx`; top in the member's tint; 44px on member cards, 32px in momentum) |
+| `src/config/squad.ts` | **This squad's identity**: app name, short name, tagline, recap title, recap file-name prefix, notification wording, avatars per member. Everything squad-specific in the code comes from here (`squad.test.ts` checks it, incl. the `public/sw.js` fallback title) |
+| `src/lib/avatars.ts` | Avatar art per member, by display name, from `squadConfig.avatars` (unit-tested); add new members there. Art: `src/components/art/person.tsx`, original stylised 3D-cartoon busts (materials `art-av-*` in `art-defs.tsx`; top in the member's tint; 44px on member cards, 32px in momentum) |
 | `src/lib/initials.ts` | Avatar initials unique within the squad (fallback for members not in `avatars.ts`; unit-tested) |
 | `src/app/(dashboard)/` | Dashboard (with member cards), Mission screen, `actions.ts` (`saveCaseCount`), loading skeleton, error state |
 | `src/components/squad/` | `LiveBoardProvider`, `SquadBoard`, `MemberCard` (-/+, debounced conflict-safe saves, hype animation; the number sizes to the room between the buttons via container units; one column below 360px) |
 | `src/components/live/live-sync.tsx` | Real-time sync (Realtime + polling fallback) and the Live badge |
 | `src/lib/supabase/browser.ts` | Browser client for Realtime only (publishable key) |
-| `src/lib/push/` | `jobs.ts` (V2 wording, error classes, runner), `message.ts` + `deliver.ts` (legacy direct send), `endpoint.ts` (allowed push hosts) — unit-tested; `server.ts` (server-only: config, web-push, `runNotifications`, `notifyAfterSave`, legacy `notifyCasesAdded`, `sendWelcome`); `client.ts` (support check, SW registration, VAPID key); `policy.ts` (quiet-hours label for the UI) |
+| `src/lib/push/` | `jobs.ts` (V2 wording, error classes, runner), `message.ts` + `deliver.ts` (legacy direct send), `endpoint.ts` (allowed push hosts) — unit-tested; `server.ts` (server-only: config, web-push, `runNotifications`, `notifyAfterSave`, legacy `notifyCasesAdded`, `sendWelcome`); `client.ts` (support check, SW registration, VAPID key); `policy.ts` (quiet-hours / recap labels for the UI, from `squadConfig.notifications`) |
 | `src/app/api/notify/run/route.ts` | Scheduler endpoint (Bearer `CRON_SECRET`) |
 | `src/app/(dashboard)/squad-actions.ts` | Check-in, phone link/preferences, cheers (Server Actions) |
 | `src/lib/me.ts`, `src/lib/cheers.ts` | This phone's member (localStorage store); cheer keys |
@@ -328,27 +329,11 @@ Copy `.env.example` to `.env.local` (git-ignored).
   new objects are private until granted.
 - Apply to the hosted project: `npx supabase login`, `npx supabase link
   --project-ref <ref>`, then `npx supabase db push`.
-- Hosted project `tdmpukylkqgibfddedxi` (ap-southeast-1, Postgres 17): all
-  nine migrations are applied and recorded in
-  `supabase_migrations.schema_migrations` (the last two,
-  `member_weekly_momentum` and `realtime_case_counts`, via the SQL editor on
-  2026-10-03; Realtime confirmed "Live" on phones). Without
+- This deployment's hosted project (ref, region, which migrations were applied
+  how and when, cron job, health checks): `docs/PRODUCTION.md`. Without
   `squad_member_momentum` the per-member weekly list is hidden; without the
-  `supabase_realtime` publication, sync falls back to polling ("Auto-updating").
-  `20261007090000_push_notifications` (push devices) is applied too (SQL
-  editor, 2026-10-07) with one row in `private.push_settings` holding
-  `sha256(PUSH_SECRET)`. Push also needs the three push env vars in Vercel;
-  without them the card stays hidden. `20261014090000_notifications_v2` is
-  applied too (SQL editor, 2026-10-14), with the Supabase Cron job
-  `cjo-notify-every-minute` (pg_cron + pg_net, secret `cjo_cron_secret` in
-  Vault) and the same `CRON_SECRET` in Vercel. Health check: `net._http_response`
-  (scheduler calls, expect 200) and `private.notification_jobs`. Without the
-  migration the app falls back to the legacy direct alerts. Rotating `PUSH_SECRET` means updating
-  that row (`update private.push_settings set secret_hash = sha256(...)`).
-  `20261024090000_squad_recap` (one read-only function, no table or policy
-  change) is applied too (SQL editor, 2026-10-24; production recap verified
-  against the live October total). Undo: `drop function
-  public.squad_recap_history(uuid, uuid, timestamptz);`.
+  `supabase_realtime` publication, sync falls back to polling ("Auto-updating");
+  without `notifications_v2` the app falls back to the legacy direct alerts.
 - Types were last generated with `@supabase/postgres-meta` against the migrated
   local database (`PG_META_GENERATE_TYPES_DETECT_ONE_TO_ONE_RELATIONSHIPS=true`,
   `PG_META_POSTGREST_VERSION=14.18`), byte-identical to the hosted generator.
@@ -371,8 +356,8 @@ written only by `send_cheer`). Notification internals live in `private`
 `cheer_log`).
 
 The squad total is **derived**, never stored (`squad_monthly_progress` view /
-`computeSquadProgress`). Campaign targets are data (`monthly_targets`; seeded
-Oct 2026 = 20, Nov = 30, Dec = 40). Never hard-code targets, months or years.
+`computeSquadProgress`). Campaign targets are data (`monthly_targets`; this deployment's seed is in
+`docs/PRODUCTION.md`). Never hard-code targets, months or years.
 The open month is resolved in the campaign's `time_zone`.
 
 ## Permission model (RLS + grants)

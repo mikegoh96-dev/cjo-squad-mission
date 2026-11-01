@@ -6,6 +6,19 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select plan(133);
 
+-- The q4-2026 campaign (Oct-Dec 2026; 20 / 30 / 40) is the test fixture. A
+-- deployment's own campaign seed may differ, so create it when missing
+-- (rolled back with everything else).
+insert into public.campaigns (slug, name, starts_on, ends_on)
+  values ('q4-2026', 'Test campaign Q4 2026', '2026-10-01', '2026-12-31')
+  on conflict (slug) do nothing;
+insert into public.monthly_targets (campaign_id, month, target_cases)
+  select c.id, t.month, t.target_cases from public.campaigns c
+  cross join (values (date '2026-10-01', 20), (date '2026-11-01', 30), (date '2026-12-01', 40))
+    as t (month, target_cases)
+  where c.slug = 'q4-2026'
+  on conflict (campaign_id, month) do nothing;
+
 -- -----------------------------------------------------------------------------
 -- Fixture
 -- -----------------------------------------------------------------------------
@@ -19,9 +32,9 @@ insert into private.push_settings (secret_hash)
 values (sha256(convert_to('test-secret-0123456789abcdef0123456789', 'UTF8')));
 
 insert into public.members (id, display_name) values
-  ('aaaaaaaa-0000-0000-0000-000000000001', 'Mike'),
-  ('aaaaaaaa-0000-0000-0000-000000000002', 'Cynthia'),
-  ('aaaaaaaa-0000-0000-0000-000000000003', 'Jamie');
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'Marcus'),
+  ('aaaaaaaa-0000-0000-0000-000000000002', 'Ben'),
+  ('aaaaaaaa-0000-0000-0000-000000000003', 'Daniel');
 insert into public.squads (id, name, created_at)
 values ('bbbbbbbb-0000-0000-0000-000000000001', 'Test squad', '2000-01-01');
 insert into public.squad_members (id, squad_id, member_id) values
@@ -29,8 +42,8 @@ insert into public.squad_members (id, squad_id, member_id) values
   ('cccccccc-0000-0000-0000-000000000002', 'bbbbbbbb-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000002'),
   ('cccccccc-0000-0000-0000-000000000003', 'bbbbbbbb-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000003');
 
--- d1: plain phone (later Jamie's)   d2: Cynthia's phone
--- d3: Mike's phone, activity + reminders off   d4: plain phone used for failures
+-- d1: plain phone (later Daniel's)   d2: Ben's phone
+-- d3: Marcus's phone, activity + reminders off   d4: plain phone used for failures
 insert into public.push_subscriptions (id, endpoint, p256dh, auth, squad_member_id, linked_at, pref_activity, pref_reminders) values
   ('eeeeeeee-0000-0000-0000-000000000001', 'https://fcm.googleapis.com/fcm/send/d1', 'BPkeyPkeyPkeyPkeyPkeyPkey01', 'authsecret01', null, null, true, true),
   ('eeeeeeee-0000-0000-0000-000000000002', 'https://web.push.apple.com/d2', 'BPkeyPkeyPkeyPkeyPkeyPkey02', 'authsecret02', 'cccccccc-0000-0000-0000-000000000002', '2026-10-20 10:00+08', true, true),
@@ -92,7 +105,7 @@ select private.plan_notifications(pg_temp.t('2026-10-14 10:01:01'));
 select is(pg_temp.jobs('milestone'), 1::bigint, 'the first case of the month is a milestone');
 select is((select payload ->> 'key' from private.notification_jobs where kind = 'milestone'), 'started', 'milestone = started');
 select is((select priority from private.notification_jobs where kind = 'milestone'), 1::smallint, 'milestones are high priority');
-select is((select payload -> 'names' from private.notification_jobs where kind = 'milestone'), '["Mike"]'::jsonb, 'milestone credits the contributor');
+select is((select payload -> 'names' from private.notification_jobs where kind = 'milestone'), '["Marcus"]'::jsonb, 'milestone credits the contributor');
 select is((select (payload ->> 'covered')::boolean from private.notification_jobs where kind = 'activity'), true,
   'the activity job for a milestone batch is marked covered (only for phones with milestones off)');
 
@@ -105,7 +118,7 @@ select private.plan_notifications(pg_temp.t('2026-10-14 11:01:05'));
 select is(pg_temp.jobs('activity'), 2::bigint, 'three rapid updates become one activity job');
 select is(
   (select payload from private.notification_jobs where kind = 'activity' order by id desc limit 1),
-  '{"month": "2026-10-01", "total": 5, "target": 20, "names": ["Cynthia", "Jamie"], "covered": false}'::jsonb,
+  '{"month": "2026-10-01", "total": 5, "target": 20, "names": ["Ben", "Daniel"], "covered": false}'::jsonb,
   'activity payload: contributors A-Z, squad total, no individual totals');
 select private.plan_notifications(pg_temp.t('2026-10-14 11:01:30'));
 select is(pg_temp.jobs('activity'), 2::bigint, 'planning again creates nothing new (idempotent)');
@@ -201,7 +214,7 @@ delete from private.notification_jobs where dedupe_key = 'test:due-at-night';
 select private.plan_notifications(pg_temp.t('2026-10-15 08:00:30'));
 select is(pg_temp.jobs('activity'), 3::bigint, 'overnight activity becomes one morning update');
 select is((select payload -> 'names' from private.notification_jobs where kind = 'activity' order by id desc limit 1),
-  '["Jamie", "Mike"]'::jsonb, 'the morning update names everyone who added overnight');
+  '["Daniel", "Marcus"]'::jsonb, 'the morning update names everyone who added overnight');
 select is((select scheduled_for from private.notification_jobs where kind = 'activity' order by id desc limit 1),
   pg_temp.t('2026-10-15 08:00:30'), 'and is due straight away');
 
@@ -369,13 +382,13 @@ select is(public.get_push_device_settings('https://fcm.googleapis.com/fcm/send/d
 select private.plan_notifications(pg_temp.t('2026-11-03 23:59:00'));
 select is(pg_temp.jobs('reminder'), 0::bigint, 'no reminder before 72 hours');
 select private.plan_notifications(pg_temp.t('2026-11-04 00:30:00'));
-select is(pg_temp.jobs('reminder'), 2::bigint, 'after 72 hours: Cynthia and Jamie (linked, unconfirmed)');
+select is(pg_temp.jobs('reminder'), 2::bigint, 'after 72 hours: Ben and Daniel (linked, unconfirmed)');
 select ok(not exists (select 1 from private.notification_jobs where kind = 'reminder' and squad_member_id = 'cccccccc-0000-0000-0000-000000000001'),
   'no reminder for a member whose phone turned reminders off');
 select is((select min(scheduled_for) from private.notification_jobs where kind = 'reminder'), pg_temp.t('2026-11-04 08:00'),
   'a reminder due at night waits for 08:00');
 
-select is((select status from private.confirm_checkin_at('cccccccc-0000-0000-0000-000000000003', 0, pg_temp.t('2026-11-04 01:00'))), 'confirmed', 'Jamie confirms zero');
+select is((select status from private.confirm_checkin_at('cccccccc-0000-0000-0000-000000000003', 0, pg_temp.t('2026-11-04 01:00'))), 'confirmed', 'Daniel confirms zero');
 select is((select confirmed_count from public.member_checkins where squad_member_id = 'cccccccc-0000-0000-0000-000000000003' and month = '2026-11-01'), 0,
   'confirmed zero is stored');
 select is((select status || ':' || reason from private.notification_jobs where kind = 'reminder' and squad_member_id = 'cccccccc-0000-0000-0000-000000000003'),
@@ -383,13 +396,13 @@ select is((select status || ':' || reason from private.notification_jobs where k
 select is((select status from private.confirm_checkin_at('cccccccc-0000-0000-0000-000000000002', 99, pg_temp.t('2026-11-04 01:00'))), 'conflict',
   'a confirmation must match the board');
 select private.plan_notifications(pg_temp.t('2026-11-04 01:30:00'));
-select is(pg_temp.jobs('reminder'), 2::bigint, 'nothing new while Cynthia''s first reminder is queued');
+select is(pg_temp.jobs('reminder'), 2::bigint, 'nothing new while Ben''s first reminder is queued');
 
 create temp table r1 as select * from private.claim_notifications(pg_temp.t('2026-11-04 08:00:05'), 10) where kind = 'reminder';
 select is((select count(*)::int from r1), 1, 'one reminder is sent');
 select is((select array_agg(r ->> 'id') from r1, jsonb_array_elements(recipients) r),
-  array['eeeeeeee-0000-0000-0000-000000000002'], 'only to the phone linked to Cynthia');
-select is((select payload ->> 'name' from r1), 'Cynthia', 'reminder payload is for that member only');
+  array['eeeeeeee-0000-0000-0000-000000000002'], 'only to the phone linked to Ben');
+select is((select payload ->> 'name' from r1), 'Ben', 'reminder payload is for that member only');
 select private.complete_notification((select job_id from r1), (select claim_token from r1),
   jsonb_build_array(jsonb_build_object('id', 'eeeeeeee-0000-0000-0000-000000000002', 'outcome', 'accepted', 'code', 201)),
   pg_temp.t('2026-11-04 08:00:05'));

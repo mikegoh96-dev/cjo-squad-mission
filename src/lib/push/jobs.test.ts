@@ -5,28 +5,28 @@ import { classifyPushError, type ClaimedJob, joinNames, renderJob, runJobs, ttlS
 const oct = { month: "2026-10-01", target: 20 };
 
 test("names are joined A-Z as given, never with numbers", () => {
-  assert.equal(joinNames(["Cynthia"]), "Cynthia");
-  assert.equal(joinNames(["Cynthia", "Jamie"]), "Cynthia and Jamie");
-  assert.equal(joinNames(["Claire", "Cynthia", "Jamie"]), "Claire, Cynthia and Jamie");
+  assert.equal(joinNames(["Ben"]), "Ben");
+  assert.equal(joinNames(["Ben", "Daniel"]), "Ben and Daniel");
+  assert.equal(joinNames(["Aisha", "Ben", "Daniel"]), "Aisha, Ben and Daniel");
   assert.equal(joinNames(["A", "B", "C", "D", "E", "F"]), "A, B, C and 3 more");
 });
 
 test("activity: one consolidated alert naming contributors, squad progress only", () => {
-  const m = renderJob("activity", { ...oct, total: 12, names: ["Cynthia", "Jamie"], covered: false });
+  const m = renderJob("activity", { ...oct, total: 12, names: ["Ben", "Daniel"], covered: false });
   assert.deepEqual(m, {
     title: "🚀 The squad is moving!",
-    body: "New cases from Cynthia and Jamie. Squad: 12 / 20 for October · 8 cases to go",
+    body: "New cases from Ben and Daniel. Squad: 12 / 20 for October · 8 cases to go",
     tag: "squad-activity",
     url: "/",
   });
-  assert.doesNotMatch(m.body, /Cynthia \d|Jamie \d/, "no individual totals");
-  assert.match(renderJob("activity", { ...oct, total: 21, names: ["Mike"] }).body, /target hit! 🎯$/);
+  assert.doesNotMatch(m.body, /Ben \d|Daniel \d/, "no individual totals");
+  assert.match(renderJob("activity", { ...oct, total: 21, names: ["Marcus"] }).body, /target hit! 🎯$/);
 });
 
 test("milestones use the in-app labels and open the Mission screen", () => {
-  const half = renderJob("milestone", { ...oct, key: "halfway", total: 10, names: ["Jamie"] });
+  const half = renderJob("milestone", { ...oct, key: "halfway", total: 10, names: ["Daniel"] });
   assert.equal(half.title, "🏅 Halfway there!");
-  assert.equal(half.body, "New cases from Jamie. Squad: 10 / 20 for October · 10 cases to go");
+  assert.equal(half.body, "New cases from Daniel. Squad: 10 / 20 for October · 10 cases to go");
   assert.equal(half.tag, "milestone-halfway");
   assert.equal(half.url, "/mission");
   assert.equal(renderJob("milestone", { ...oct, key: "started", total: 1, names: [] }).title, "⭐ Mission started!");
@@ -36,7 +36,7 @@ test("milestones use the in-app labels and open the Mission screen", () => {
 });
 
 test("rally is collective and positive", () => {
-  const r = renderJob("rally", { ...oct, total: 18, names: ["Cynthia"] });
+  const r = renderJob("rally", { ...oct, total: 18, names: ["Ben"] });
   assert.equal(r.title, "🔥 So close!");
   assert.equal(r.body, "The squad is 2 cases away from clearing October. One squad, one mission!");
   assert.equal(renderJob("rally", { month: "2026-11-01", target: 30, total: 29 }).body,
@@ -44,9 +44,9 @@ test("rally is collective and positive", () => {
 });
 
 test("reminder is private wording for one member and links to their check-in", () => {
-  const r = renderJob("reminder", { month: "2026-11-01", name: "Cynthia", seq: 1 });
+  const r = renderJob("reminder", { month: "2026-11-01", name: "Ben", seq: 1 });
   assert.equal(r.title, "Quick squad check-in");
-  assert.equal(r.body, "Cynthia, please confirm your November case count (even if it's zero) so the mission board stays accurate.");
+  assert.equal(r.body, "Ben, please confirm your November case count (even if it's zero) so the mission board stays accurate.");
   assert.equal(r.url, "/?checkin=1");
   assert.equal(r.tag, "checkin");
   assert.match(renderJob("reminder", { month: "2026-11-01" }).body, /^Please confirm/);
@@ -100,8 +100,8 @@ test("runner: plans, claims, sends to every recipient, reports each result", asy
   const calls: string[] = [];
   const completed: Array<[number, unknown]> = [];
   const queue = [[
-    job(1, "milestone", { ...oct, key: "halfway", total: 10, names: ["Jamie"] }, [phone("a"), phone("b"), phone("c")]),
-    job(2, "activity", { ...oct, total: 11, names: ["Mike"] }, [phone("a")]),
+    job(1, "milestone", { ...oct, key: "halfway", total: 10, names: ["Daniel"] }, [phone("a"), phone("b"), phone("c")]),
+    job(2, "activity", { ...oct, total: 11, names: ["Marcus"] }, [phone("a")]),
   ]];
   const report = await runJobs({
     plan: async () => calls.push("plan"),
@@ -129,7 +129,7 @@ test("runner: the originating phone is not filtered out (no exceptEndpoint)", as
     send: async () => {},
     complete: async () => {},
   });
-  const one = [job(1, "activity", { ...oct, total: 3, names: ["Mike"] }, [phone("tapper"), phone("other")])];
+  const one = [job(1, "activity", { ...oct, total: 3, names: ["Marcus"] }, [phone("tapper"), phone("other")])];
   await runJobs({
     plan: async () => {},
     claim: async () => one.splice(0),

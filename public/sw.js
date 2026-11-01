@@ -1,4 +1,4 @@
-// CJO Squad Mission service worker: shows push notifications only (no
+// Service worker: shows push notifications only (no
 // offline caching). Messages are JSON { title, body, tag, url } from the server.
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
@@ -10,6 +10,8 @@ self.addEventListener("push", (event) => {
   } catch {
     data = { body: event.data ? event.data.text() : "" };
   }
+  // Fallback only: every message from the server has a title. Keep in step
+  // with appName in src/config/squad.ts (a unit test checks).
   const title = data.title || "CJO Squad Mission";
   event.waitUntil(
     self.registration.showNotification(title, {

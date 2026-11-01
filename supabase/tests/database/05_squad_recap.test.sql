@@ -1,6 +1,6 @@
 -- Squad Recap history (read-only). Run with: npx supabase test db
 --
--- Fixture (rolled back): a past campaign (Jan-Feb 2026) with squad Alpha (Mike,
+-- Fixture (rolled back): a past campaign (Jan-Feb 2026) with squad Alpha (Marcus,
 -- Jeremy) and squad Bravo (Sarah); history rows at fixed times.
 begin;
 create extension if not exists pgtap with schema extensions;
@@ -14,7 +14,7 @@ insert into public.monthly_targets (campaign_id, month, target_cases) values
   ('dddddddd-0000-0000-0000-0000000000e1', '2026-02-01', 12),
   ('dddddddd-0000-0000-0000-0000000000e2', '2026-03-01', 5);
 insert into public.members (id, display_name) values
-  ('00000000-0000-0000-0000-0000000000e1', 'Mike'),
+  ('00000000-0000-0000-0000-0000000000e1', 'Marcus'),
   ('00000000-0000-0000-0000-0000000000e2', 'Jeremy'),
   ('00000000-0000-0000-0000-0000000000e3', 'Sarah');
 insert into public.squads (id, name, created_at) values

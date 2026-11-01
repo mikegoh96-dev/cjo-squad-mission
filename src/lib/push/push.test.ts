@@ -4,23 +4,23 @@ import { deliver, type PushDevice } from "./deliver.ts";
 import { isPushEndpoint } from "./endpoint.ts";
 import { casesAddedMessage, welcomeMessage } from "./message.ts";
 
-const base = { squadMemberId: "m1", name: "Cynthia", target: 20, monthLabel: "October" };
+const base = { squadMemberId: "m1", name: "Ben", target: 20, monthLabel: "October" };
 
 test("a case added: credits the person, headline is the squad's progress", () => {
   assert.deepEqual(casesAddedMessage({ ...base, added: 1, squadTotal: 5 }), {
-    title: "🎉 Cynthia added a case",
+    title: "🎉 Ben added a case",
     body: "Squad: 5 / 20 for October · 15 cases to go",
     tag: "member-m1",
     url: "/",
   });
-  assert.equal(casesAddedMessage({ ...base, added: 2, squadTotal: 7 }).title, "🎉 Cynthia added 2 cases");
+  assert.equal(casesAddedMessage({ ...base, added: 2, squadTotal: 7 }).title, "🎉 Ben added 2 cases");
   assert.equal(casesAddedMessage({ ...base, added: 1, squadTotal: 19 }).body, "Squad: 19 / 20 for October · 1 case to go");
 });
 
 test("crossing a milestone gets a milestone headline", () => {
   const half = casesAddedMessage({ ...base, added: 2, squadTotal: 11 });
   assert.equal(half.title, "🏅 Halfway there!");
-  assert.equal(half.body, "Cynthia added 2 cases. Squad: 11 / 20 for October · 9 cases to go");
+  assert.equal(half.body, "Ben added 2 cases. Squad: 11 / 20 for October · 9 cases to go");
   assert.equal(half.tag, "milestone-halfway");
   assert.equal(casesAddedMessage({ ...base, added: 1, squadTotal: 1 }).title, "⭐ Mission started!");
   assert.equal(casesAddedMessage({ ...base, added: 1, squadTotal: 15 }).title, "⚡ Momentum!");
@@ -34,15 +34,15 @@ test("saves landing together: the exact before-total decides the milestone", () 
   const first = casesAddedMessage({ ...base, added: 1, squadTotal: 2, squadBefore: 0 });
   const second = casesAddedMessage({ ...base, added: 1, squadTotal: 2, squadBefore: 1 });
   assert.equal(first.title, "⭐ Mission started!");
-  assert.equal(first.body, "Cynthia added a case. Squad: 2 / 20 for October · 18 cases to go");
-  assert.equal(second.title, "🎉 Cynthia added a case");
+  assert.equal(first.body, "Ben added a case. Squad: 2 / 20 for October · 18 cases to go");
+  assert.equal(second.title, "🎉 Ben added a case");
   // Without it, both would read before = 1 and the milestone would be missed.
-  assert.equal(casesAddedMessage({ ...base, added: 1, squadTotal: 2 }).title, "🎉 Cynthia added a case");
+  assert.equal(casesAddedMessage({ ...base, added: 1, squadTotal: 2 }).title, "🎉 Ben added a case");
 });
 
 test("past the target: no new milestone, still celebrates", () => {
   const m = casesAddedMessage({ ...base, added: 1, squadTotal: 25 });
-  assert.equal(m.title, "🎉 Cynthia added a case");
+  assert.equal(m.title, "🎉 Ben added a case");
   assert.equal(m.body, "Squad: 25 / 20 for October · target hit! 🎯");
 });
 

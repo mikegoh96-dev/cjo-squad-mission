@@ -1,18 +1,15 @@
 // Which avatar art each squad member gets (identity only, never a comparison).
-// Matched on display name, case-insensitive. Anyone not listed keeps their
-// initials until added here.
+// Matched on display name, case-insensitive. The names live in
+// src/config/squad.ts; anyone not listed there keeps their initials.
 
-export type AvatarKind = "man" | "woman";
+import { type AvatarKind, squadConfig } from "../config/squad.ts";
 
-const BY_NAME: Record<string, AvatarKind> = {
-  claire: "woman",
-  cynthia: "woman",
-  jamie: "woman",
-  jasmine: "woman",
-  jy: "man",
-  mike: "man",
-};
+export type { AvatarKind };
+
+const BY_NAME = new Map<string, AvatarKind>(
+  Object.entries(squadConfig.avatars).map(([name, kind]) => [name.trim().toLowerCase(), kind]),
+);
 
 export function avatarKindFor(name: string): AvatarKind | null {
-  return BY_NAME[name.trim().toLowerCase()] ?? null;
+  return BY_NAME.get(name.trim().toLowerCase()) ?? null;
 }

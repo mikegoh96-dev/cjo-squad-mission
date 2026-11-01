@@ -26,6 +26,7 @@ import {
   resultLine,
   sceneStart,
 } from "@/lib/recap-video";
+import { squadConfig } from "@/config/squad";
 
 type Composition = typeof import("./video/composition");
 type Encoder = typeof import("./video/encode");
@@ -261,7 +262,7 @@ export function RecapVideoProvider({ ctx, children }: { ctx: RecapContext; child
   const share = async (made: Made) => {
     const file = new File([made.blob], made.name, { type: made.blob.type });
     try {
-      await navigator.share({ files: [file], title: "CJO Squad Recap" });
+      await navigator.share({ files: [file], title: squadConfig.recapTitle });
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") return;
       setNote("Sharing didn't work here. Download the file, then post it from your gallery.");

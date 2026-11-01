@@ -11,6 +11,7 @@ import { getMe, setMe, useMe } from "@/lib/me";
 import { type DevicePrefs, type DeviceSettings, fetchDeviceSettings } from "@/lib/notify-client";
 import { type PushSupport, pushSupport, registerServiceWorker, vapidKeyBytes } from "@/lib/push/client";
 import { QUIET_HOURS_LABEL, RECAP_LABEL } from "@/lib/push/policy";
+import { squadConfig } from "@/config/squad";
 
 type View = "checking" | "hidden" | "off" | "working" | "on" | "blocked" | "error";
 
@@ -198,7 +199,8 @@ export function NotificationsCard({
               <Toggle label="Weekly recap" hint={RECAP_LABEL} checked={settings.prefs.recap} onChange={(v) => changePref("recap", v)} />
             </ul>
             <p className="mt-2 text-[12px] font-medium text-muted">
-              During quiet hours ({QUIET_HOURS_LABEL}, Singapore time) alerts wait until 8am.
+              During quiet hours ({QUIET_HOURS_LABEL}, {squadConfig.notifications.timeZoneLabel}) alerts wait until{" "}
+              {squadConfig.notifications.quietEnd}.
             </p>
           </div>
         ) : null}
@@ -326,7 +328,7 @@ function InstallSteps() {
           Tap <ShareIcon className="mx-0.5 inline size-[18px] -translate-y-0.5 text-accent" /> Share in Safari
         </Step>
         <Step n={2}>Choose &ldquo;Add to Home Screen&rdquo;</Step>
-        <Step n={3}>Open CJO Squad from your Home Screen and tap &ldquo;Turn on notifications&rdquo;</Step>
+        <Step n={3}>Open {squadConfig.shortName} from your Home Screen and tap &ldquo;Turn on notifications&rdquo;</Step>
       </ol>
     </section>
   );

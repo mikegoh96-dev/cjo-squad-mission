@@ -8,7 +8,7 @@ test("accepts UUIDs", () => {
 });
 
 test("rejects names, numbers and injection attempts", () => {
-  for (const input of ["mike", "", "20000000-0000-0000-0000-00000000000", "20000000-0000-0000-0000-00000000000bb",
+  for (const input of ["marcus", "", "20000000-0000-0000-0000-00000000000", "20000000-0000-0000-0000-00000000000bb",
     "20000000-0000-0000-0000-00000000000b' or '1'='1", null, undefined, 42, {}]) {
     assert.equal(isUuid(input), false, String(input));
   }

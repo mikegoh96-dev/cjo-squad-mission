@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
+import { squadConfig } from "../config/squad.ts";
 import {
   type HistoryEvent,
   type Recap,
@@ -276,7 +277,7 @@ describe("computeRecap", () => {
     assert.equal(
       text,
       [
-        "CJO Squad Recap · This week (Mon 19 Oct – Sun 25 Oct 2026, in progress)",
+        `${squadConfig.recapTitle} · This week (Mon 19 Oct – Sun 25 Oct 2026, in progress)`,
         "+11 cases together",
         "October: 11 of 20 cases (55%)",
         "Milestones: Mission started, Halfway there",

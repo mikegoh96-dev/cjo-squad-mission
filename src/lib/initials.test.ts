@@ -8,23 +8,23 @@ const asList = (names: string[]) => {
   return names.map((_, i) => map.get(String(i)));
 };
 
-test("the CJO squad gets distinct initials", () => {
-  assert.deepEqual(asList(["Claire", "Jasmine", "Jamie", "Mike", "JY"]), ["CL", "JS", "JM", "MK", "JY"]);
+test("a squad gets distinct initials", () => {
+  assert.deepEqual(asList(["Chloe", "Jessica", "Jenny", "Marcus", "KJ"]), ["CH", "JS", "JN", "MR", "KJ"]);
 });
 
 test("natural initials", () => {
-  assert.equal(initialsFor("Jamie"), "JM");
-  assert.equal(initialsFor("Jasmine"), "JS");
-  assert.equal(initialsFor("Mike Goh"), "MG");
-  assert.equal(initialsFor("jy"), "JY");
+  assert.equal(initialsFor("Jenny"), "JN");
+  assert.equal(initialsFor("Jessica"), "JS");
+  assert.equal(initialsFor("Ben Tan"), "BT");
+  assert.equal(initialsFor("kj"), "KJ");
   assert.equal(initialsFor("Al"), "AL");
   assert.equal(initialsFor("Aiea"), "AI"); // no consonant: first two letters
   assert.equal(initialsFor("   "), "?");
 });
 
 test("collisions fall back to the next candidate", () => {
-  assert.deepEqual(asList(["Mike", "Mika"]), ["MI", "MK"]); // Mika (first by name) keeps MK
-  assert.deepEqual(asList(["Mike Tan", "Mary Tan"]), ["MA", "MT"]);
+  assert.deepEqual(asList(["Dane", "Dana"]), ["DA", "DN"]); // Dana (first by name) keeps DN
+  assert.deepEqual(asList(["Dane Lim", "Dana Lim"]), ["DI", "DL"]);
   const all = asList(["Sam", "Sim", "Sum", "Som"]);
   assert.equal(new Set(all).size, 4);
 });

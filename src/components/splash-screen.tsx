@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { Trophy3D } from "@/components/art/objects";
+import { squadConfig } from "@/config/squad";
 
 /**
  * Launch screen for the website and the Home Screen app.
@@ -141,13 +142,13 @@ export function SplashScreen() {
           </span>
           <Trophy3D className="splash-trophy" />
         </div>
-        <p className="splash-title">CJO Squad Mission</p>
+        <p className="splash-title">{squadConfig.appName}</p>
         <p className="splash-tag">One squad. One mission.</p>
         <div
           ref={bar}
           className="splash-bar"
           role="progressbar"
-          aria-label="Loading CJO Squad Mission"
+          aria-label={`Loading ${squadConfig.appName}`}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={18}

@@ -17,6 +17,7 @@ import {
   pluralCases,
 } from "./mission.ts";
 import { monthLabel, todayIn } from "./progress.ts";
+import { squadConfig } from "../config/squad.ts";
 
 export type RecapKind = "week" | "month";
 
@@ -382,7 +383,7 @@ export function recapSummaryText(
 ): string {
   const p = recap.period;
   const lines = [
-    `CJO Squad Recap · ${p.title} (${p.rangeLabel}${p.status === "in-progress" ? ", in progress" : ""})`,
+    `${squadConfig.recapTitle} · ${p.title} (${p.rangeLabel}${p.status === "in-progress" ? ", in progress" : ""})`,
     recap.updates === 0 ? "No case updates recorded in this period." : `${formatDelta(recap.casesAdded)} cases together`,
   ];
   for (const m of recap.months) lines.push(`${m.label}: ${m.progress.total} of ${m.target} cases (${m.progress.percent}%)`);

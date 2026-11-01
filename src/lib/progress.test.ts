@@ -16,7 +16,7 @@ const targets = [
 ];
 const members = [
   { squadMemberId: "s", displayName: "Sarah" },
-  { squadMemberId: "m", displayName: "Mike" },
+  { squadMemberId: "m", displayName: "Marcus" },
   { squadMemberId: "j", displayName: "Jeremy" },
 ];
 const counts = [
@@ -72,7 +72,7 @@ test("contributions are alphabetical (never ranked by count)", () => {
   const p = at("2030-10-20T04:00:00Z");
   assert.deepEqual(
     p.contributions.map((c) => [c.displayName, c.monthCases, c.campaignCases]),
-    [["Jeremy", 6, 6], ["Mike", 12, 14], ["Sarah", 3, 3]],
+    [["Jeremy", 6, 6], ["Marcus", 12, 14], ["Sarah", 3, 3]],
   );
 });
 

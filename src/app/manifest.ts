@@ -1,12 +1,13 @@
 import type { MetadataRoute } from "next";
 import { siteConfig } from "@/config/site";
+import { squadConfig } from "@/config/squad";
 
 // Web app manifest: lets the squad add the app to their Home Screen (needed on
 // iPhone for push notifications) and open it full screen.
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: siteConfig.name,
-    short_name: "CJO Squad",
+    short_name: squadConfig.shortName,
     description: siteConfig.description,
     start_url: "/",
     scope: "/",
