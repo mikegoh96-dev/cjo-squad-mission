@@ -11,6 +11,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const out = process.argv[2] ? resolve(process.argv[2]) : null;
 if (!out) {
@@ -22,7 +23,9 @@ if (existsSync(out) && readdirSync(out).some((f) => f !== ".git")) {
   process.exit(1);
 }
 
-const git = (...args) => execFileSync("git", args, { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+// Always read this repository, wherever the script is run from.
+const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const git = (...args) => execFileSync("git", args, { cwd: repo, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
 
 // This squad's data and production notes: never part of the starter.
 const EXCLUDE = new Set([
@@ -70,7 +73,7 @@ if (!appName || !currentName) throw new Error("could not read appName from the s
 
 for (const path of files) {
   const source = overrides.includes(path) ? `starter/${path}` : path;
-  let data = execFileSync("git", ["show", `HEAD:${source}`], { maxBuffer: 64 * 1024 * 1024 });
+  let data = execFileSync("git", ["show", `HEAD:${source}`], { cwd: repo, maxBuffer: 64 * 1024 * 1024 });
   if (path === "public/sw.js") {
     const sw = data.toString("utf8");
     const from = `data.title || ${currentName}`;
