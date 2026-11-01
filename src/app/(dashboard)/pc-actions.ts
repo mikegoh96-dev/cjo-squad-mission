@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { type PcSubmitRow, submitPcAmounts } from "@/lib/data/pc-updates";
 import { isUuid } from "@/lib/ids";
 import { parsePcEntries } from "@/lib/pc";
+import { notifyAfterPcSave } from "@/lib/push/server";
 
 export type SavePcResult =
   | { status: "done"; rows: PcSubmitRow[] }
@@ -23,7 +25,12 @@ export async function savePcAmounts(input: { challengeId: unknown; entries: unkn
 
   const result = await submitPcAmounts(input.challengeId.toLowerCase(), entries);
   if (!result.ok) return { status: "error", reason: result.reason };
-  // The Mission page's PC$ total and standings read the new amounts.
-  if (result.rows.some((r) => r.status === "saved")) revalidatePath("/", "layout");
+  if (result.rows.some((r) => r.status === "saved")) {
+    // The Mission page's PC$ total and standings read the new amounts.
+    revalidatePath("/", "layout");
+    // The save queued its notification in the database; deliver it now
+    // (every opted-in phone, including this one).
+    after(() => notifyAfterPcSave());
+  }
   return { status: "done", rows: result.rows };
 }

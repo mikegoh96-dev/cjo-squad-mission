@@ -155,6 +155,24 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
   at the minimum. Maths and formatting: `src/lib/pc.ts` (unit-tested). The
   dashboard loads challenges in its first parallel round trip and hides PC$
   if that query fails (e.g. before the migration).
+  **PC$ notifications** (migration `20261102090000_pc_notifications.sql`, on
+  the same outbox: claim / deliver / retry / quiet hours / preferences): the
+  save (`private.submit_pc_amounts_at`, behind `submit_pc_amounts`) queues ONE
+  job in its own transaction via `private.pc_enqueue` (failed, rolled-back,
+  unchanged or conflict-only saves queue nothing; key
+  `pc:<challenge>:<first history id>`), and `savePcAmounts` delivers it at once
+  (`notifyAfterPcSave` via `after()`; the scheduler is the fallback). Saves are
+  serialised per challenge (advisory lock). `pc_activity`: whose cumulative
+  amount changed and to what (increase, first entry or correction) + the squad
+  total from saved amounts; `pc_milestone` adds the individual minimum crossing
+  (below -> at/above) and/or the squad target first reached, each recorded once
+  per challenge in `private.pc_milestones` (a correction below and a later
+  re-crossing is never announced again). One message per save, the highest
+  event as its title. A job not yet picked up (quiet hours) absorbs later
+  saves: one morning message, aged from its send time. Preferences:
+  `pc_activity` = activity; `pc_milestone` = activity or milestones. Wording in
+  `renderJob` (`jobs.ts`): names whose amount it is, never who typed it, no
+  pronouns, no reward implied.
 - **Launch splash** (`src/components/splash-screen.tsx`, CSS "Splash" in
   `globals.css`, mounted in the root layout): server-rendered, so it paints
   with the first HTML and animates with CSS before any JavaScript. The logo is
@@ -413,7 +431,7 @@ written only by `send_cheer`), `pc_challenges` and `member_pc_amounts` (PC$
 challenge; written only by `submit_pc_amounts`). Notification internals live in `private`
 (`notify_policy`, `notification_jobs`, `notification_deliveries`,
 `notification_activity_items`, `notification_milestones`, `checkin_reminders`,
-`cheer_log`).
+`cheer_log`, `pc_milestones`).
 
 The squad total is **derived**, never stored (`squad_monthly_progress` view /
 `computeSquadProgress`). Campaign targets are data (`monthly_targets`; seeded per deployment by

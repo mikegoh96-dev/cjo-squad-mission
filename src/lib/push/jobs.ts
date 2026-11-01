@@ -5,11 +5,12 @@
 // delivers. Collective framing: contributors are named A-Z, never with their
 // own totals, never ranked.
 import { monthMilestones, missionProgress, type MilestoneKey, pluralCases } from "../mission.ts";
+import { pcDollars } from "../pc.ts";
 import { monthLabel } from "../progress.ts";
 import { isPushEndpoint } from "./endpoint.ts";
 import type { PushMessage } from "./message.ts";
 
-export type JobKind = "activity" | "milestone" | "rally" | "reminder" | "recap";
+export type JobKind = "activity" | "milestone" | "rally" | "reminder" | "recap" | "pc_activity" | "pc_milestone";
 
 export type ClaimedJob = {
   jobId: number;
@@ -77,6 +78,81 @@ const names = (p: Payload): string[] => {
 };
 const isKey = (v: unknown): v is MilestoneKey =>
   v === "started" || v === "halfway" || v === "momentum" || v === "cleared";
+
+// PC$ challenge (pc_activity / pc_milestone): whose cumulative amount changed
+// and to what (never who typed it: there is no login), the squad total from
+// the database, and any milestone the save crossed.
+type PcUpdate = { name: string; old: number | null; next: number };
+const MAX_LISTED = 5;
+
+function pcUpdates(p: Payload): PcUpdate[] {
+  const v = p.updates;
+  if (!Array.isArray(v) || v.length === 0) throw new TypeError("payload.updates must be a non-empty list");
+  return v.map((x) => {
+    const u = obj(x);
+    if (typeof u.name !== "string" || !u.name.trim()) throw new TypeError("update.name must be text");
+    const old = u.old === null || u.old === undefined ? null : int(u, "old");
+    return { name: u.name.trim(), old, next: int(u, "new") };
+  });
+}
+
+const isCorrection = (u: PcUpdate) => u.old !== null && u.next < u.old;
+/** A–Z like the member cards (case-insensitive), whatever order the database used. */
+const byName = (a: string, b: string) => a.localeCompare(b, "en", { sensitivity: "base" }) || a.localeCompare(b, "en");
+
+/** "Ben's November production is now $8,000." / "...was corrected to $7,500." / a list for several. */
+function pcUpdatesLine(updates: PcUpdate[], month: string): string {
+  if (updates.length === 1) {
+    const [u] = updates;
+    return isCorrection(u)
+      ? `${u.name}'s ${month} production was corrected to ${pcDollars(u.next)}.`
+      : `${u.name}'s ${month} production is now ${pcDollars(u.next)}.`;
+  }
+  const allCorrections = updates.every(isCorrection);
+  const items = updates
+    .slice(0, MAX_LISTED)
+    .map((u) => `${u.name} ${pcDollars(u.next)}${isCorrection(u) && !allCorrections ? " (corrected)" : ""}`);
+  const more = updates.length > MAX_LISTED ? ` and ${updates.length - MAX_LISTED} more` : "";
+  return `${month} production${allCorrections ? " corrected" : ""}: ${items.join(", ")}${more}.`;
+}
+
+function renderPc(kind: "pc_activity" | "pc_milestone", p: Payload): PushMessage {
+  const m = month(p);
+  const total = int(p, "total");
+  const target = int(p, "target");
+  const minimum = int(p, "minimum");
+  const updates = pcUpdates(p).sort((a, b) => byName(a.name, b.name));
+  const reached = names({ names: p.minimum_reached ?? [] }).sort(byName);
+  const progress = `Squad progress: ${pcDollars(total)} / ${pcDollars(target)}.`;
+  const line = pcUpdatesLine(updates, m);
+
+  if (kind === "pc_milestone" && p.target_reached === true) {
+    const parts = [`Your squad has reached ${pcDollars(target)}! Squad total: ${pcDollars(total)}.`];
+    if (reached.length) parts.push(`${joinNames(reached)} ${reached.length === 1 ? "has" : "have"} reached the ${pcDollars(minimum)} minimum.`);
+    parts.push(
+      p.everyone_minimum === true
+        ? `Every member is at the ${pcDollars(minimum)} minimum too.`
+        : `Next: every member needs at least ${pcDollars(minimum)}.`,
+    );
+    parts.push(line);
+    return { title: "🏆 SQUAD PC$ TARGET ACHIEVED!", body: parts.join(" "), tag: "pc-target", url: "/mission" };
+  }
+  if (kind === "pc_milestone" && reached.length) {
+    return {
+      title: "✅ MINIMUM PC$ ACHIEVED!",
+      body: `${joinNames(reached)} ${reached.length === 1 ? "has" : "have"} reached the individual ${pcDollars(minimum)} requirement! ${line} ${progress}`,
+      tag: `pc-minimum-${reached.join("-").toLowerCase().replace(/[^a-z0-9-]/g, "")}`.slice(0, 60),
+      url: "/mission",
+    };
+  }
+  const corrections = updates.every(isCorrection);
+  return {
+    title: corrections ? "✏️ PC$ CORRECTION" : "💰 PC$ UPDATE!",
+    body: `${line} ${progress}`,
+    tag: "pc-update",
+    url: "/",
+  };
+}
 
 /** The notification for one outbox job. Throws on a malformed payload. */
 export function renderJob(kind: string, payload: unknown): PushMessage {
@@ -147,6 +223,9 @@ export function renderJob(kind: string, payload: unknown): PushMessage {
       );
       return { title: "📊 Your squad's week", body: parts.join(" "), tag: "recap", url: "/mission" };
     }
+    case "pc_activity":
+    case "pc_milestone":
+      return renderPc(kind, p);
     default:
       throw new TypeError(`unknown job kind ${kind}`);
   }
@@ -154,7 +233,7 @@ export function renderJob(kind: string, payload: unknown): PushMessage {
 
 /** How long a push service should keep trying to reach an offline phone. */
 export function ttlSeconds(kind: string): number {
-  return kind === "activity" ? 2 * 3600 : kind === "rally" ? 6 * 3600 : 12 * 3600;
+  return kind === "activity" || kind === "pc_activity" ? 2 * 3600 : kind === "rally" ? 6 * 3600 : 12 * 3600;
 }
 
 // ---------------------------------------------------------------------------

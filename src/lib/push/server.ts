@@ -117,7 +117,7 @@ export async function runNotifications(): Promise<RunResult> {
         );
       },
       send: (recipient, payload, kind) =>
-        sendTo(config, recipient, payload, { ttl: ttlSeconds(kind), urgency: kind === "milestone" ? "high" : "normal" }),
+        sendTo(config, recipient, payload, { ttl: ttlSeconds(kind), urgency: kind === "milestone" || kind === "pc_milestone" ? "high" : "normal" }),
       complete: async (job, results) => {
         const { error } = await supabase.rpc("notify_complete", {
           p_secret: config.secret,
@@ -149,6 +149,20 @@ export async function notifyAfterSave(input: { squadMemberId: string; previousCo
     if (result.status === "legacy") await notifyCasesAdded({ ...input, exceptEndpoint: null });
   } catch (error) {
     console.error("notify: after save failed", (error as { code?: string }).code ?? error);
+  }
+}
+
+/**
+ * After a PC$ save stored something (runs after the response). The save
+ * already queued its notification in the outbox, in the same transaction;
+ * this only delivers it now instead of on the scheduler's next run. Never
+ * throws.
+ */
+export async function notifyAfterPcSave(): Promise<void> {
+  try {
+    await runNotifications();
+  } catch (error) {
+    console.error("notify: after PC$ save failed", (error as { code?: string }).code ?? error);
   }
 }
 
