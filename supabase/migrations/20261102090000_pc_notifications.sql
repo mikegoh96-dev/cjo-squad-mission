@@ -40,6 +40,21 @@ create unique index pc_milestones_once on private.pc_milestones (challenge_id, k
 alter table private.pc_milestones enable row level security;
 revoke all on table private.pc_milestones from public, anon, authenticated;
 
+-- Amounts saved before this migration: minimums (and a target) already met are
+-- recorded silently, so they are never announced later as if new.
+insert into private.pc_milestones (challenge_id, key, squad_member_id, amount, reached_at)
+select a.challenge_id, 'minimum', a.squad_member_id, a.amount, now()
+from public.member_pc_amounts a
+join public.pc_challenges c on c.id = a.challenge_id
+where a.amount >= c.member_minimum
+on conflict do nothing;
+insert into private.pc_milestones (challenge_id, key, squad_member_id, amount, reached_at)
+select c.id, 'target', null, t.total, now()
+from public.pc_challenges c
+join (select challenge_id, sum(amount) as total from public.member_pc_amounts group by challenge_id) t on t.challenge_id = c.id
+where t.total >= c.target_amount
+on conflict do nothing;
+
 -- -----------------------------------------------------------------------------
 -- Queue the notification for one PC$ save (called inside the save).
 -- p_after: the last history id before the save; rows after it are this save.
