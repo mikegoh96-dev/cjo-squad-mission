@@ -40,3 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# squad setup (npm run setup): your squad's details and the generated SQL (may hold secrets)
+/squad.setup.json
+/supabase/setup.local.sql

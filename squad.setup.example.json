@@ -1,0 +1,13 @@
+{
+  "squad": "Team Alpha",
+  "members": ["Aisha", "Ben", "Chloe", "Daniel"],
+  "campaign": {
+    "slug": "q1-2027",
+    "name": "Team Alpha Q1 2027",
+    "startsOn": "2027-01-01",
+    "endsOn": "2027-03-31",
+    "timeZone": "Asia/Singapore",
+    "targets": { "2027-01": 15, "2027-02": 20, "2027-03": 25 }
+  },
+  "appUrl": "https://team-alpha-mission.vercel.app"
+}
