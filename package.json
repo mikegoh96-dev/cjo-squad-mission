@@ -14,6 +14,7 @@
     "db:types": "supabase gen types typescript --linked --schema public > src/lib/supabase/database.types.ts",
     "members": "node --env-file-if-exists=.env.local scripts/members.mjs",
     "setup": "node --env-file-if-exists=.env.local scripts/setup.mjs",
+    "export:starter": "node scripts/export-starter.mjs",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {

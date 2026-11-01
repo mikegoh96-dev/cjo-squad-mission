@@ -43,7 +43,7 @@ function report(events: HistoryEvent[], month = "2026-10-01", now = sg("2026-11-
     memberIds: ["a", "b", "c"],
     now,
   });
-  const r = buildVideoReport(recap, "CJO Squad Mission Q4 2026");
+  const r = buildVideoReport(recap, "Test Squad Mission (Oct to Dec)");
   if (r) assert.equal(r.kind, "month");
   return r as MonthlyVideoReport | null;
 }
@@ -56,7 +56,7 @@ function weekly(events: HistoryEvent[], monday: string, now: Date, members = ["a
     memberIds: members,
     now,
   });
-  const r = buildVideoReport(recap, "CJO Squad Mission Q4 2026");
+  const r = buildVideoReport(recap, "Test Squad Mission (Oct to Dec)");
   if (r) assert.equal(r.kind, "week");
   return r as WeeklyVideoReport | null;
 }

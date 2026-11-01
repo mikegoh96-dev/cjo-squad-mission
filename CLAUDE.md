@@ -27,7 +27,7 @@ shows everywhere immediately.
 
 ## V1 scope
 
-Shared dashboard; October / November / December missions (current month
+Shared dashboard; one mission per month of the current campaign (current month
 featured; the month-by-month cards are on the Mission screen only); collective progress; team momentum (net cases today / this week, plus each
 member's net this week listed A–Z, never ranked);
 monthly milestones (first case, 50%, 75%, target) with a short celebration;
@@ -303,6 +303,34 @@ npm run members -- remove <squad_member_id>   # also deletes their counts + hist
 
 To correct a count, tap - on that member's card, or use the SQL editor.
 
+## New squads: config, setup, starter template
+
+Every squad runs its own independent copy: own GitHub repo, Supabase project
+and Vercel project. No shared database, no cross-squad view.
+
+- **Squad identity** (names, wording, avatars): `src/config/squad.ts`.
+- **Squad data**: `npm run setup` (`scripts/setup.mjs`) reads the git-ignored
+  `squad.setup.json` (template: `squad.setup.example.json`) and writes the
+  git-ignored `supabase/setup.local.sql`, run once in the Supabase SQL editor
+  after `npx supabase db push`. It sets the squad, members, campaign (+ time
+  zone) and monthly targets, plus the `notify_policy` time zone and
+  `reminders_from`. `--push` adds the `PUSH_SECRET` hash, the `CRON_SECRET` in
+  Vault (`cjo_cron_secret`) and the Cron job `cjo-notify-every-minute`
+  (secrets come from `.env.local`; delete the SQL file after running it).
+  Re-runnable; a new campaign slug adds the next campaign; refuses a second
+  squad or overlapping campaigns. It never connects to a database.
+- **Starter template** (public `mikegoh96-dev/cjo-squad-starter`, a GitHub
+  template repo): `npm run export:starter -- <dir>` (`scripts/export-starter.mjs`)
+  builds it from `HEAD`: drops `docs/PRODUCTION.md`, this squad's campaign
+  migration and `06_campaign_seed.test.sql`, swaps in `starter/` (placeholder
+  `squad.ts`, README) and fails if member names, the project ref, the
+  production URL, the campaign or secret-looking text remain. So keep
+  squad-specific values in `squad.ts`, the campaign migration or
+  `docs/PRODUCTION.md` only. The starter gets fresh history; publish updates
+  by exporting into a clone of it and committing the difference.
+- **Guide for other squad leaders**: `docs/BUILD-YOUR-SQUAD-APP.md` (same file
+  in both repos).
+
 ## Environment variables
 
 Copy `.env.example` to `.env.local` (git-ignored).
@@ -329,8 +357,9 @@ Copy `.env.example` to `.env.local` (git-ignored).
   new objects are private until granted.
 - Apply to the hosted project: `npx supabase login`, `npx supabase link
   --project-ref <ref>`, then `npx supabase db push`.
-- This deployment's hosted project (ref, region, which migrations were applied
-  how and when, cron job, health checks): `docs/PRODUCTION.md`. Without
+- Notes about this deployment's hosted project (ref, region, which migrations
+  were applied how and when, cron job, health checks) go in
+  `docs/PRODUCTION.md` (kept out of the starter template). Without
   `squad_member_momentum` the per-member weekly list is hidden; without the
   `supabase_realtime` publication, sync falls back to polling ("Auto-updating");
   without `notifications_v2` the app falls back to the legacy direct alerts.
@@ -356,8 +385,8 @@ written only by `send_cheer`). Notification internals live in `private`
 `cheer_log`).
 
 The squad total is **derived**, never stored (`squad_monthly_progress` view /
-`computeSquadProgress`). Campaign targets are data (`monthly_targets`; this deployment's seed is in
-`docs/PRODUCTION.md`). Never hard-code targets, months or years.
+`computeSquadProgress`). Campaign targets are data (`monthly_targets`; seeded per deployment by
+`npm run setup` or a `*_campaign_*` migration; see `docs/PRODUCTION.md`). Never hard-code targets, months or years.
 The open month is resolved in the campaign's `time_zone`.
 
 ## Permission model (RLS + grants)
