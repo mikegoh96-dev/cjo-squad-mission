@@ -1,4 +1,5 @@
 import "server-only";
+import { type PcChallenge, type PcPhase, pcPhase } from "@/lib/pc";
 import { type SquadProgress, computeSquadProgress, pickCurrentCampaign } from "@/lib/progress";
 import { createClient } from "@/lib/supabase/server";
 
@@ -17,7 +18,17 @@ export type Dashboard =
       progress: SquadProgress;
       momentum: Momentum;
       lastUpdatedAt: string | null;
+      /** The current campaign's PC$ challenge (null if none, or not set up in the database yet). */
+      pc: PcBoard | null;
     };
+
+/** The latest PC$ challenge that has opened, with each member's cumulative amount. */
+export type PcBoard = {
+  challenge: PcChallenge;
+  phase: PcPhase;
+  /** squad member id -> saved cumulative amount (members without an entry are absent). */
+  amounts: Record<string, number>;
+};
 
 /** Net cases added to the squad (campaign time zone); corrections count. */
 export type Momentum = {
@@ -36,9 +47,10 @@ export type Momentum = {
 export async function getDashboard(): Promise<Dashboard> {
   const supabase = createClient();
 
-  // Two parallel round trips in total: (campaigns + targets, squad + members),
-  // then (counts, momentum). Latency to the database dominates page time.
-  const [campaignResult, squadResult] = await Promise.all([
+  // Two parallel round trips in total: (campaigns + targets, squad + members,
+  // PC$ challenges + amounts), then (counts, momentum). Latency to the database
+  // dominates page time.
+  const [campaignResult, squadResult, pcResult] = await Promise.all([
     supabase.from("campaigns").select("id, name, starts_on, ends_on, time_zone, monthly_targets (month, target_cases)"),
     supabase
       .from("squads")
@@ -46,6 +58,12 @@ export async function getDashboard(): Promise<Dashboard> {
       .order("created_at")
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from("pc_challenges")
+      .select(
+        "id, campaign_id, name, eligible_from, eligible_to, target_amount, member_minimum, opens_at, closes_at, member_pc_amounts (squad_member_id, amount)",
+      )
+      .order("opens_at", { ascending: false }),
   ]);
   if (campaignResult.error) throw campaignResult.error;
   if (squadResult.error) throw squadResult.error;
@@ -107,6 +125,9 @@ export async function getDashboard(): Promise<Dashboard> {
       null,
     );
 
+  // PC$ is optional: never fail the dashboard over it (e.g. before its migration).
+  const pc = pcResult.error ? null : pickPcBoard(pcResult.data, campaign.id);
+
   return {
     state: "ready",
     campaignName: campaign.name,
@@ -117,5 +138,42 @@ export async function getDashboard(): Promise<Dashboard> {
     progress,
     momentum: { today: momentumRow?.today ?? 0, thisWeek: momentumRow?.this_week ?? 0, memberWeek },
     lastUpdatedAt,
+    pc,
+  };
+}
+
+function pickPcBoard(
+  rows: Array<{
+    id: string;
+    campaign_id: string;
+    name: string;
+    eligible_from: string;
+    eligible_to: string;
+    target_amount: number;
+    member_minimum: number;
+    opens_at: string;
+    closes_at: string;
+    member_pc_amounts: Array<{ squad_member_id: string; amount: number }>;
+  }>,
+  campaignId: string,
+  now: Date = new Date(),
+): PcBoard | null {
+  // Newest first: the latest challenge of this campaign that has opened.
+  const row = rows.find((r) => r.campaign_id === campaignId && Date.parse(r.opens_at) <= now.getTime());
+  if (!row) return null;
+  const challenge: PcChallenge = {
+    id: row.id,
+    name: row.name,
+    eligibleFrom: row.eligible_from,
+    eligibleTo: row.eligible_to,
+    target: row.target_amount,
+    minimum: row.member_minimum,
+    opensAt: row.opens_at,
+    closesAt: row.closes_at,
+  };
+  return {
+    challenge,
+    phase: pcPhase(challenge, now),
+    amounts: Object.fromEntries(row.member_pc_amounts.map((a) => [a.squad_member_id, a.amount])),
   };
 }

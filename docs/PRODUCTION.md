@@ -10,6 +10,10 @@ secret values here.
   (`q4-2026`, Oct–Dec 2026, targets Oct 20 / Nov 30 / Dec 40, checked by
   `supabase/tests/database/06_campaign_seed.test.sql`). Notification reminders
   apply from `reminders_from` = 2026-11-01 (the `notify_policy` default).
+- November PC$ challenge seed: `supabase/migrations/20261101090100_pc_challenge_nov_2026.sql`
+  (`pc-nov-2026`: target $182,972 incl. growth, minimum $5,000, production
+  1–30 Nov 2026, entries until 30 Nov 23:59:59 Singapore time; checked by
+  `06_campaign_seed.test.sql`). Needs `20261101090000_pc_challenge.sql` first.
 - Policy values in `private.notify_policy` may have been tuned in the SQL editor;
   check the live row before copying values elsewhere.
 

@@ -11,7 +11,7 @@ select tables_are(
   array[
     'members', 'squads', 'squad_members', 'campaigns', 'monthly_targets',
     'member_case_counts', 'case_update_history', 'push_subscriptions',
-    'member_checkins', 'squad_cheers'
+    'member_checkins', 'squad_cheers', 'pc_challenges', 'member_pc_amounts'
   ],
   'public schema contains exactly the application tables'
 );

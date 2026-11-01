@@ -41,11 +41,14 @@ export function MemberCard({
   name,
   initials,
   serverCount,
+  children,
 }: {
   id: string;
   name: string;
   initials: string;
   serverCount: number;
+  /** Extra content under the case count (the PC$ field while a challenge is open). */
+  children?: React.ReactNode;
 }) {
   const { editable, setLocal, announce } = useLiveBoard();
   const isMe = useMe() === id; // this phone's own card (routing choice, not identity)
@@ -330,6 +333,7 @@ export function MemberCard({
           <span className="text-muted">{display === 1 ? "case" : "cases"}</span>
         )}
       </p>
+      {children}
     </li>
   );
 }

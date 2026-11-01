@@ -6,6 +6,7 @@ import { Eyebrow } from "@/components/ui";
 import { pluralCases } from "@/lib/mission";
 import { useLiveBoard } from "./live-board";
 import { MemberCard } from "./member-card";
+import { PcField, PcSaveBar } from "./pc-entry";
 
 export type BoardMember = { id: string; name: string; initials: string; count: number };
 
@@ -41,10 +42,13 @@ export function SquadBoard({
       ) : (
         <ul className="mt-3 grid grid-cols-1 gap-3 min-[360px]:grid-cols-2" data-testid="squad-board">
           {members.map((m) => (
-            <MemberCard key={m.id} id={m.id} name={m.name} initials={m.initials} serverCount={m.count} />
+            <MemberCard key={m.id} id={m.id} name={m.name} initials={m.initials} serverCount={m.count}>
+              <PcField id={m.id} name={m.name} />
+            </MemberCard>
           ))}
         </ul>
       )}
+      {members.length > 0 ? <PcSaveBar /> : null}
       <div
         className="mt-4 flex items-center justify-between rounded-tile bg-accent-soft px-4 py-3 shadow-tile"
         data-testid="squad-total"

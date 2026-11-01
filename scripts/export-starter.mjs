@@ -31,6 +31,7 @@ const git = (...args) => execFileSync("git", args, { cwd: repo, encoding: "utf8"
 const EXCLUDE = new Set([
   "docs/PRODUCTION.md",
   "supabase/migrations/20261002035215_campaign_q4_2026.sql",
+  "supabase/migrations/20261101090100_pc_challenge_nov_2026.sql",
   "supabase/tests/database/06_campaign_seed.test.sql",
   "scripts/export-starter.mjs",
 ]);
@@ -48,6 +49,7 @@ const DENY = [
   [/tdmpukylkqgibfddedxi/, "this squad's Supabase project ref"],
   [/cjo-squad-mission-pi/, "this squad's production URL"],
   [/q4-2026|Q4 2026/, "this squad's campaign"],
+  [/182,?972/, "this squad's PC$ target"],
   [/sb_secret_[A-Za-z0-9]/, "a Supabase secret key"],
   [/-----BEGIN [A-Z ]*PRIVATE KEY/, "a private key"],
   [/eyJhbGciOi[A-Za-z0-9_-]{20,}/, "a JWT"],

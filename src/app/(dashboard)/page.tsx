@@ -10,11 +10,13 @@ import { MissionHero } from "@/components/mission/mission-hero";
 import { MomentumCard } from "@/components/mission/momentum-card";
 import { NotificationsCard } from "@/components/push/notifications-card";
 import { LiveBoardProvider } from "@/components/squad/live-board";
+import { PcEntryProvider } from "@/components/squad/pc-entry";
 import { SquadBoard } from "@/components/squad/squad-board";
 import { Card } from "@/components/ui";
 import { siteConfig } from "@/config/site";
 import { type Dashboard, getDashboard } from "@/lib/data/dashboard";
 import { relativeTime } from "@/lib/mission";
+import { pcMonthLabel } from "@/lib/pc";
 import { isPushConfigured } from "@/lib/push/server";
 import type { Contribution } from "@/lib/progress";
 
@@ -23,7 +25,7 @@ export default async function DashboardPage() {
   const dashboard = await getDashboard();
   if (dashboard.state !== "ready") return <NotReady dashboard={dashboard} />;
 
-  const { progress, squadId, squadName, momentum, lastUpdatedAt } = dashboard;
+  const { progress, squadId, squadName, momentum, lastUpdatedAt, pc } = dashboard;
   const { focus, milestones } = progress;
   const editable = focus.phase === "current";
   const reached = editable ? milestones.filter((m) => m.reached).at(-1) : undefined;
@@ -55,22 +57,24 @@ export default async function DashboardPage() {
         celebrationKey={celebrationKey}
       >
         <MissionHero focus={focus} phase={progress.phase} dayOfMonth={progress.dayOfMonth} />
-        <SquadBoard
-          members={progress.contributions.map((c) => ({
-            id: c.squadMemberId,
-            name: c.displayName,
-            initials: c.initials,
-            count: c.monthCases,
-          }))}
-          monthLabel={focus.label}
-          closedNote={
-            progress.phase === "before"
-              ? `Updates open on 1 ${focus.label}.`
-              : progress.phase === "finished"
-                ? "The mission has finished. Thank you, squad!"
-                : null
-          }
-        />
+        <OptionalPcEntry pc={pc} people={progress.contributions}>
+          <SquadBoard
+            members={progress.contributions.map((c) => ({
+              id: c.squadMemberId,
+              name: c.displayName,
+              initials: c.initials,
+              count: c.monthCases,
+            }))}
+            monthLabel={focus.label}
+            closedNote={
+              progress.phase === "before"
+                ? `Updates open on 1 ${focus.label}.`
+                : progress.phase === "finished"
+                  ? "The mission has finished. Thank you, squad!"
+                  : null
+            }
+          />
+        </OptionalPcEntry>
         <CheckinCard
           members={progress.contributions.map((c) => ({ id: c.squadMemberId, name: c.displayName, initials: c.initials }))}
           monthLabel={focus.label}
@@ -97,6 +101,30 @@ export default async function DashboardPage() {
         />
       ) : null}
     </AppShell>
+  );
+}
+
+/** PC$ fields appear inside the member cards only while a PC$ challenge is open. */
+function OptionalPcEntry({
+  pc,
+  people,
+  children,
+}: {
+  pc: Extract<Dashboard, { state: "ready" }>["pc"];
+  people: Contribution[];
+  children: React.ReactNode;
+}) {
+  if (!pc || pc.phase !== "open") return children;
+  return (
+    <PcEntryProvider
+      challengeId={pc.challenge.id}
+      monthLabel={pcMonthLabel(pc.challenge)}
+      minimum={pc.challenge.minimum}
+      amounts={pc.amounts}
+      names={Object.fromEntries(people.map((c) => [c.squadMemberId, c.displayName]))}
+    >
+      {children}
+    </PcEntryProvider>
   );
 }
 

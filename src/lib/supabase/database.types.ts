@@ -201,6 +201,42 @@ export type Database = {
           },
         ]
       }
+      member_pc_amounts: {
+        Row: {
+          amount: number
+          challenge_id: string
+          squad_member_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          challenge_id: string
+          squad_member_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          challenge_id?: string
+          squad_member_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_pc_amounts_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "pc_challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_pc_amounts_squad_member_id_fkey"
+            columns: ["squad_member_id"]
+            isOneToOne: false
+            referencedRelation: "squad_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       members: {
         Row: {
           created_at: string
@@ -241,6 +277,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "monthly_targets_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pc_challenges: {
+        Row: {
+          campaign_id: string
+          closes_at: string
+          created_at: string
+          eligible_from: string
+          eligible_to: string
+          id: string
+          member_minimum: number
+          name: string
+          opens_at: string
+          slug: string
+          target_amount: number
+        }
+        Insert: {
+          campaign_id: string
+          closes_at: string
+          created_at?: string
+          eligible_from: string
+          eligible_to: string
+          id?: string
+          member_minimum: number
+          name: string
+          opens_at: string
+          slug: string
+          target_amount: number
+        }
+        Update: {
+          campaign_id?: string
+          closes_at?: string
+          created_at?: string
+          eligible_from?: string
+          eligible_to?: string
+          id?: string
+          member_minimum?: number
+          name?: string
+          opens_at?: string
+          slug?: string
+          target_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pc_challenges_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
@@ -550,6 +636,14 @@ export type Database = {
           case_count: number
           month: string
           previous_count: number
+          status: string
+        }[]
+      }
+      submit_pc_amounts: {
+        Args: { p_challenge_id: string; p_entries: Json }
+        Returns: {
+          amount: number
+          squad_member_id: string
           status: string
         }[]
       }
