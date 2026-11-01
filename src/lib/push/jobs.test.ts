@@ -179,48 +179,48 @@ test("runner: keeps claiming full batches, stops at the time budget", async () =
 // ---------------------------------------------------------------------------
 // PC$ challenge
 // ---------------------------------------------------------------------------
-const pc = { month: "2026-11-01", target: 182972, minimum: 5000, total: 85000, everyone_minimum: false, minimum_reached: [], target_reached: false };
+const pc = { month: "2026-11-01", target: 120000, minimum: 5000, total: 85000, everyone_minimum: false, minimum_reached: [], target_reached: false };
 const upd = (name: string, old: number | null, next: number) => ({ id: `id-${name}`, name, old, new: next });
 
 test("PC$ update: one member's new cumulative amount and the squad total, no editor or pronoun claimed", () => {
-  const m = renderJob("pc_activity", { ...pc, updates: [upd("Claire", 6000, 8000)] });
+  const m = renderJob("pc_activity", { ...pc, updates: [upd("Chloe", 6000, 8000)] });
   assert.deepEqual(m, {
     title: "💰 PC$ UPDATE!",
-    body: "Claire's November production is now $8,000. Squad progress: $85,000 / $182,972.",
+    body: "Chloe's November production is now $8,000. Squad progress: $85,000 / $120,000.",
     tag: "pc-update",
     url: "/",
   });
   assert.doesNotMatch(m.body, /\b(her|his|their|just updated)\b/);
-  assert.equal(renderJob("pc_activity", { ...pc, updates: [upd("Claire", null, 8000)] }).title, "💰 PC$ UPDATE!", "a first entry");
+  assert.equal(renderJob("pc_activity", { ...pc, updates: [upd("Chloe", null, 8000)] }).title, "💰 PC$ UPDATE!", "a first entry");
 });
 
 test("PC$ correction: a lower amount is a correction, never new production", () => {
-  const m = renderJob("pc_activity", { ...pc, total: 84500, updates: [upd("Claire", 8000, 7500)] });
+  const m = renderJob("pc_activity", { ...pc, total: 84500, updates: [upd("Chloe", 8000, 7500)] });
   assert.equal(m.title, "✏️ PC$ CORRECTION");
-  assert.equal(m.body, "Claire's November production was corrected to $7,500. Squad progress: $84,500 / $182,972.");
+  assert.equal(m.body, "Chloe's November production was corrected to $7,500. Squad progress: $84,500 / $120,000.");
   assert.doesNotMatch(m.body, /now|new/i);
 });
 
 test("PC$ batch: one consolidated notification listing every member", () => {
-  const m = renderJob("pc_activity", { ...pc, updates: [upd("Ben", null, 3500), upd("Claire", 8000, 7500), upd("Daniel", 1000, 2000)] });
+  const m = renderJob("pc_activity", { ...pc, updates: [upd("Ben", null, 3500), upd("Chloe", 8000, 7500), upd("Daniel", 1000, 2000)] });
   assert.equal(m.title, "💰 PC$ UPDATE!");
-  assert.equal(m.body, "November production: Ben $3,500, Claire $7,500 (corrected), Daniel $2,000. Squad progress: $85,000 / $182,972.");
-  const all = renderJob("pc_activity", { ...pc, updates: [upd("Ben", 4000, 3500), upd("Claire", 8000, 7500)] });
+  assert.equal(m.body, "November production: Ben $3,500, Chloe $7,500 (corrected), Daniel $2,000. Squad progress: $85,000 / $120,000.");
+  const all = renderJob("pc_activity", { ...pc, updates: [upd("Ben", 4000, 3500), upd("Chloe", 8000, 7500)] });
   assert.equal(all.title, "✏️ PC$ CORRECTION");
-  assert.equal(all.body, "November production corrected: Ben $3,500, Claire $7,500. Squad progress: $85,000 / $182,972.");
+  assert.equal(all.body, "November production corrected: Ben $3,500, Chloe $7,500. Squad progress: $85,000 / $120,000.");
   const many = renderJob("pc_activity", { ...pc, updates: ["A", "B", "C", "D", "E", "F", "G"].map((n) => upd(n, null, 1000)) });
   assert.match(many.body, /^November production: A \$1,000, B \$1,000, C \$1,000, D \$1,000, E \$1,000 and 2 more\./);
 });
 
 test("PC$ minimum reached: special title naming who reached it, with the update and squad total", () => {
-  const m = renderJob("pc_milestone", { ...pc, minimum_reached: ["Claire"], updates: [upd("Claire", 4000, 8000)] });
+  const m = renderJob("pc_milestone", { ...pc, minimum_reached: ["Chloe"], updates: [upd("Chloe", 4000, 8000)] });
   assert.equal(m.title, "✅ MINIMUM PC$ ACHIEVED!");
   assert.equal(
     m.body,
-    "Claire has reached the individual $5,000 requirement! Claire's November production is now $8,000. Squad progress: $85,000 / $182,972.",
+    "Chloe has reached the individual $5,000 requirement! Chloe's November production is now $8,000. Squad progress: $85,000 / $120,000.",
   );
   assert.equal(m.url, "/mission");
-  assert.match(renderJob("pc_milestone", { ...pc, minimum_reached: ["Ben", "Claire"], updates: [upd("Ben", 0, 5000), upd("Claire", 1, 6000)] }).body, /^Ben and Claire have reached/);
+  assert.match(renderJob("pc_milestone", { ...pc, minimum_reached: ["Ben", "Chloe"], updates: [upd("Ben", 0, 5000), upd("Chloe", 1, 6000)] }).body, /^Ben and Chloe have reached/);
 });
 
 test("PC$ squad target: announced without implying any reward is confirmed", () => {
@@ -230,7 +230,7 @@ test("PC$ squad target: announced without implying any reward is confirmed", () 
   assert.equal(m.title, "🏆 SQUAD PC$ TARGET ACHIEVED!");
   assert.equal(
     m.body,
-    "Your squad has reached $182,972! Squad total: $183,500. Daniel has reached the $5,000 minimum. Next: every member needs at least $5,000. Daniel's November production is now $15,000.",
+    "Your squad has reached $120,000! Squad total: $183,500. Daniel has reached the $5,000 minimum. Next: every member needs at least $5,000. Daniel's November production is now $15,000.",
   );
   assert.doesNotMatch(m.body, /iphone|reward|prize|won|confirmed|qualif/i);
   const all = renderJob("pc_milestone", { ...pc, total: 190000, target_reached: true, everyone_minimum: true, updates: [upd("Ben", 100, 200)] });
@@ -246,10 +246,10 @@ test("PC$ malformed payloads are refused", () => {
 
 test("PC$ names are listed A–Z like the cards, case-insensitive, whatever the database order", () => {
   const m = renderJob("pc_milestone", {
-    ...pc, minimum_reached: ["Mike", "JY", "Jasmine"], updates: [upd("Mike", 0, 6000), upd("JY", 0, 6000), upd("Jasmine", 0, 6000)],
+    ...pc, minimum_reached: ["Marcus", "JR", "Jenny"], updates: [upd("Marcus", 0, 6000), upd("JR", 0, 6000), upd("Jenny", 0, 6000)],
   });
-  assert.match(m.body, /^Jasmine, JY and Mike have reached/);
-  assert.match(m.body, /November production: Jasmine \$6,000, JY \$6,000, Mike \$6,000\./);
+  assert.match(m.body, /^Jenny, JR and Marcus have reached/);
+  assert.match(m.body, /November production: Jenny \$6,000, JR \$6,000, Marcus \$6,000\./);
 });
 
 test("PC$ ttl: routine updates expire like activity, milestones like celebrations", () => {
@@ -259,7 +259,7 @@ test("PC$ ttl: routine updates expire like activity, milestones like celebration
 
 test("runner: a PC$ job reaches every recipient, including the phone that saved", async () => {
   const sent: Array<[string, string]> = [];
-  const one = [job(7, "pc_activity", { ...pc, updates: [upd("Claire", null, 8000)] }, [phone("saver"), phone("other")])];
+  const one = [job(7, "pc_activity", { ...pc, updates: [upd("Chloe", null, 8000)] }, [phone("saver"), phone("other")])];
   const report = await runJobs({
     plan: async () => {},
     claim: async () => one.splice(0),
