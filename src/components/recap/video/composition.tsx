@@ -22,7 +22,9 @@ import {
   resultLine,
   sceneAt,
   targetLine,
+  videoScenes,
 } from "@/lib/recap-video";
+import type { RecapPc } from "@/lib/recap-pc";
 import { squadConfig } from "@/config/squad";
 
 type Art = "trophy" | "medal" | "star" | "bolt" | "gem";
@@ -303,7 +305,8 @@ function image(ctx: Ctx, img: CanvasImageSource, cx: number, cy: number, size: n
 /** Draws the frame at `ms` from the start onto a 1080 × 1920 context. */
 export function drawFrame(ctx: Ctx, r: VideoReport, a: VideoAssets, ms: number) {
   const { width: W, height: H } = VIDEO;
-  const s = sceneAt(ms);
+  const scenes = videoScenes(r);
+  const s = sceneAt(ms, scenes);
 
   // Background: lavender, soft drifting light, faint rays from the top.
   const bg = ctx.createLinearGradient(0, 0, 0, H);
@@ -318,7 +321,7 @@ export function drawFrame(ctx: Ctx, r: VideoReport, a: VideoAssets, ms: number) 
   rays(ctx, W / 2, -120, 1500, drift * 0.03, 0.5);
 
   // Each scene rises in and fades out (the last one stays as the final frame).
-  const last = s.index === 4;
+  const last = s.index === scenes.length - 1;
   const fadeIn = easeOut(s.local / 450);
   const fadeOut = last ? 1 : 1 - clamp01((s.local - (s.duration - 320)) / 320);
   ctx.save();
@@ -328,6 +331,9 @@ export function drawFrame(ctx: Ctx, r: VideoReport, a: VideoAssets, ms: number) 
   else if (s.id === "achievement") {
     if (r.kind === "week") weekAchievement(ctx, r, a, s.local);
     else achievement(ctx, r, a, s.local);
+  }
+  else if (s.id === "pc") {
+    if (r.kind === "month" && r.pc) pcChallenge(ctx, r.pc, a, s.local);
   }
   else if (s.id === "milestones") milestones(ctx, r, a, s.local);
   else if (s.id === "momentum") momentum(ctx, r, a, s.local);
@@ -456,6 +462,82 @@ function achievement(ctx: Ctx, r: MonthlyVideoReport, a: VideoAssets, t: number)
       text(ctx, a, "So far this month", 540, 1600, { size: 36, weight: 700, color: C.muted }),
     );
   }
+}
+
+/**
+ * The PC$ challenge, squad level and percentage only (never an amount, a name
+ * or how many members did or didn't reach the minimum).
+ */
+function pcChallenge(ctx: Ctx, pc: RecapPc, a: VideoAssets, t: number) {
+  text(ctx, a, `${pc.monthLabel.toUpperCase()} PC$ CHALLENGE`, 540, 330, { size: 40, color: C.accent, spacing: 8, maxWidth: 940 });
+  card(ctx, a, 90, 390, 900, 1130, 72, "#ffffff", C.lip);
+
+  const pop = backOut(phase(t, 100, 800));
+  glow(ctx, 540, 560, 260, pc.reached ? "rgba(79,212,127,0.28)" : "rgba(115,146,255,0.25)");
+  withAlpha(ctx, clamp01(t / 300), () =>
+    scaled(ctx, 540, 560, 0.6 + 0.4 * pop, () => image(ctx, a.art.gem, 540, 560 + Math.sin(t / 520) * 10, 250)),
+  );
+
+  const grow = easeOut(phase(t, 300, 1800));
+  text(ctx, a, `${Math.floor(pc.percent * grow)}%`, 540, 935, {
+    size: 220,
+    color: pc.reached ? C.goodText : C.ink,
+    maxWidth: 760,
+  });
+  text(ctx, a, "OF OUR SQUAD TARGET", 540, 1015, { size: 40, color: C.muted, spacing: 4 });
+  const fill = ctx.createLinearGradient(170, 0, 910, 0);
+  fill.addColorStop(0, pc.reached ? "#4fd47f" : "#7392ff");
+  fill.addColorStop(1, pc.reached ? C.good : C.accent);
+  meter(ctx, 170, 1075, 740, 44, pc.meterPercent * grow, pc.reached ? "#d5f2df" : C.track, fill);
+
+  const p = phase(t, 2100, 500);
+  withAlpha(ctx, clamp01(p * 2), () => {
+    if (pc.reached) {
+      scaled(ctx, 540, 1235, 0.8 + 0.2 * backOut(p), () => pill(ctx, a, "TARGET REACHED!", 540, 1235, C.goodSoft, C.goodText, 44));
+    } else if (!pc.closed) {
+      scaled(ctx, 540, 1225, 0.8 + 0.2 * backOut(p), () => pill(ctx, a, "SO FAR", 540, 1225, "#e6ecfd", C.accentStrong, 40));
+      text(ctx, a, `Entries close ${pc.closesLabel}`, 540, 1325, { size: 40, weight: 700, color: C.muted, maxWidth: 820 });
+    } else {
+      text(ctx, a, "Together we reached", 540, 1230, { size: 56, color: C.ink, maxWidth: 820 });
+      text(ctx, a, `${pc.percent}% of our target`, 540, 1305, { size: 56, color: C.accentStrong, maxWidth: 820 });
+    }
+  });
+
+  if (pc.everyoneMinimum) {
+    const q = phase(t, 2700, 500);
+    withAlpha(ctx, clamp01(q * 2), () =>
+      scaled(ctx, 540, 1435, 0.85 + 0.15 * backOut(q), () => checkPill(ctx, a, "Every member reached the individual minimum", 540, 1435)),
+    );
+  }
+}
+
+/** A green pill with a drawn tick (no font glyph needed). */
+function checkPill(ctx: Ctx, a: VideoAssets, label: string, cx: number, cy: number) {
+  const size = 34;
+  ctx.font = font(a, size, 800);
+  const tw = Math.min(700, ctx.measureText(label).width);
+  const icon = 52;
+  const w = Math.min(880, tw + icon + 18 + 80);
+  const h = 84;
+  const x = cx - w / 2;
+  ctx.fillStyle = C.goodSoft;
+  roundRect(ctx, x, cy - h / 2, w, h, h / 2);
+  ctx.fill();
+  const ix = x + 40 + icon / 2;
+  ctx.fillStyle = C.good;
+  ctx.beginPath();
+  ctx.arc(ix, cy, icon / 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 7;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.beginPath();
+  ctx.moveTo(ix - 12, cy + 1);
+  ctx.lineTo(ix - 3, cy + 10);
+  ctx.lineTo(ix + 13, cy - 9);
+  ctx.stroke();
+  text(ctx, a, label, ix + icon / 2 + 18, cy + size * 0.36, { size, align: "left", color: C.goodText, maxWidth: w - icon - 18 - 80 });
 }
 
 /** Weekly result: the week's net cases, a Mon–Sun bar per day, the month(s) as of the week's end. */

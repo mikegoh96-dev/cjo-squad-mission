@@ -380,6 +380,8 @@ export function recapHeadline(recap: Extract<Recap, { state: "ready" }>): string
 export function recapSummaryText(
   recap: Extract<Recap, { state: "ready" }>,
   next: { monthLabel: string; total: number; target: number; remaining: number } | null,
+  /** An extra squad-level line (the PC$ result, percentage only), after the cases. */
+  extra: string | null = null,
 ): string {
   const p = recap.period;
   const lines = [
@@ -388,6 +390,7 @@ export function recapSummaryText(
   ];
   for (const m of recap.months) lines.push(`${m.label}: ${m.progress.total} of ${m.target} cases (${m.progress.percent}%)`);
   if (recap.milestones.length) lines.push(`Milestones: ${recap.milestones.map((m) => m.label).join(", ")}`);
+  if (extra) lines.push(extra);
   if (recap.campaign) lines.push(`Campaign: ${recap.campaign.total} of ${recap.campaign.target} cases`);
   if (next && next.remaining > 0) lines.push(`Next: ${pluralCases(next.remaining)} to clear ${next.monthLabel}`);
   lines.push("One Squad. One Mission. Let's keep the momentum going.");

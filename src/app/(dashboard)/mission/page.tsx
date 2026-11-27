@@ -14,6 +14,7 @@ import { Card, Decor, Eyebrow, Meter, Ring } from "@/components/ui";
 import { getDashboard } from "@/lib/data/dashboard";
 import { ENCOURAGEMENT, nextMilestone, remainingMessage, unlockMessage } from "@/lib/mission";
 import { pcStanding } from "@/lib/pc";
+import { recapPcFrom } from "@/lib/recap-pc";
 
 export const metadata: Metadata = { title: "Mission" };
 
@@ -54,6 +55,11 @@ export default async function MissionPage() {
       meterPercent: overall.meterPercent,
       complete: overall.complete,
     },
+    // Percentage only reaches the recap (never amounts or names); not before entries open.
+    pc:
+      pc && pc.phase !== "before"
+        ? recapPcFrom(pc.challenge, pc.phase, pcStanding(pc.challenge, people, pc.amounts), dashboard.campaign.timeZone)
+        : null,
   };
 
   return (

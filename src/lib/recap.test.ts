@@ -288,4 +288,11 @@ describe("computeRecap", () => {
     );
     assert.doesNotMatch(text, /member-/);
   });
+
+  test("an extra squad-level line (the PC$ result) goes after the cases", () => {
+    const r = ready(recap(week("2026-10-19"), [ev("2026-10-20T10:00:00", 3, A)]));
+    const lines = recapSummaryText(r, null, "November PC$: 64% of our squad target (so far)").split("\n");
+    assert.equal(lines[lines.indexOf("Milestones: Mission started") + 1], "November PC$: 64% of our squad target (so far)");
+    assert.equal(lines.length, recapSummaryText(r, null).split("\n").length + 1);
+  });
 });

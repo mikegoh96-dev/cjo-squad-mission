@@ -189,7 +189,7 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
 - **Squad Recap** (Mission page only; `src/components/recap/`): the "Squad
   Recap" card -> "Generate Recap" -> pick Weekly (this week / last week) or
   Monthly (each campaign month that has started), with the exact period shown
-  -> a ~22 s animated story (opening, squad performance, milestones, thank-you
+  -> a ~22 s animated story (opening, squad performance, [PC$ result], milestones, thank-you
   to the whole squad A–Z, next mission) with pause, back/next, skip to summary,
   close (× / Escape) -> a summary card (Replay, Back to Mission, "Download
   Weekly Recap Video" + "Download Monthly Recap Video" (the viewed kind first;
@@ -217,12 +217,12 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
   preview, Generate Video, then Download Video / Share (file share, when the
   browser supports it) / Preview Again / Close. Made entirely on the phone:
   `video/composition.tsx` draws a dedicated 1080 × 1920 composition on a
-  canvas (5 scenes, 20.6 s, the Mission page look + the 3D art rasterised from
+  canvas (5 scenes, 20.6 s; 6 scenes, 25.2 s with the PC$ result; the Mission page look + the 3D art rasterised from
   `components/art`; weekly: the week's net cases, a Mon–Sun bar per day and
   the month(s) as of the week's end instead of the month ring), `video/encode.ts` encodes every frame as H.264 with
   WebCodecs and muxes MP4 with **Mediabunny** (pinned 1.61.3, MPL-2.0,
   dynamic import: only loaded when the dialog opens). Output is fixed in
-  `src/lib/recap-video.ts` (`VIDEO`: 1080 × 1920, 30 fps, 618 frames, no
+  `src/lib/recap-video.ts` (`VIDEO`: 1080 × 1920, 30 fps, 618 frames (756 with PC$: `videoScenes` / `videoFrames` per report), no
   audio, ~7 Mbit/s); the report is built there from `computeRecap` (no second
   calculation), and one snapshot per month feeds both the preview and the file.
   Progress = frames encoded; one job at a time; Cancel / Close stops it and
@@ -231,6 +231,19 @@ One shared URL for the whole squad. No accounts, no sign-in anywhere.
   is uploaded or stored; no server rendering. File:
   `<fileSlug>-<Month>-<Year>.mp4` or `<fileSlug>-Week-of-<D>-<Mon>-<Year>.mp4`
   (`squadConfig.fileSlug`, e.g. `CJO-Squad-Recap`; `.png` for the still).
+- **PC$ result in the recaps** (added 2026-11-27 at the owner's request;
+  `src/lib/recap-pc.ts`, unit-tested): the monthly Squad Recap and recap video
+  of the challenge's month get a "<Month> PC$ Challenge" scene right after the
+  cases result (story +4.5 s; video `VIDEO_PC_SCENE`, +4.6 s). **Percentage
+  only** (floored, squad level): never an amount, a name or how many members
+  did or didn't reach the minimum. Status: "Target reached! 🎯" / while open
+  "So far · entries close <closesLabel>" / closed "Together we reached X% of our
+  target". "Every member reached the individual minimum ✓" only when true for
+  everyone; otherwise the minimum isn't mentioned. The summary card and the
+  shared text add one line (`pcSummaryLine`). The Mission page builds
+  `RecapContext.pc` on the server (`recapPcFrom`; null before entries open or
+  without a challenge), so only these fields reach the browser. Every other
+  recap and video keeps its exact timeline.
 - **App updates** (Home Screen apps resume old copies and have no reload or
   pull-to-refresh): `next.config.ts` stamps each build with `APP_VERSION`
   (Vercel deployment id); `/api/version` returns the live one (no-store).

@@ -5,6 +5,7 @@
 import { type MilestoneKey, formatDelta } from "./mission.ts";
 import { type Recap, weekdayShort } from "./recap.ts";
 import { squadConfig } from "../config/squad.ts";
+import { type RecapPc, recapPcFor } from "./recap-pc.ts";
 
 /** Output format: Instagram Stories (9:16). Fixed here, never taken from the browser. */
 export const VIDEO = { width: 1080, height: 1920, fps: 30 } as const;
@@ -16,27 +17,50 @@ export const VIDEO_SCENES = [
   { id: "momentum", ms: 4200 },
   { id: "closing", ms: 4000 },
 ] as const;
-export type VideoSceneId = (typeof VIDEO_SCENES)[number]["id"];
+/** The PC$ challenge scene: only in the monthly video of the challenge's month, right after the cases result. */
+export const VIDEO_PC_SCENE = { id: "pc", ms: 4600 } as const;
+export type VideoScene = (typeof VIDEO_SCENES)[number] | typeof VIDEO_PC_SCENE;
+export type VideoSceneId = VideoScene["id"];
 
+/** The base timeline (every video without a PC$ scene). */
 export const VIDEO_DURATION_MS = VIDEO_SCENES.reduce((sum, s) => sum + s.ms, 0);
 export const VIDEO_FRAMES = Math.round((VIDEO_DURATION_MS * VIDEO.fps) / 1000);
 
+/** The scenes of one video, in order. */
+export function videoScenes(r: Pick<VideoReport, "kind"> & { pc?: unknown }): readonly VideoScene[] {
+  if (r.kind !== "month" || !r.pc) return VIDEO_SCENES;
+  const i = VIDEO_SCENES.findIndex((s) => s.id === "achievement") + 1;
+  return [...VIDEO_SCENES.slice(0, i), VIDEO_PC_SCENE, ...VIDEO_SCENES.slice(i)];
+}
+const durationOf = (scenes: readonly VideoScene[]) => scenes.reduce((sum, s) => sum + s.ms, 0);
+/** Length of one video (ms). */
+export function videoDurationMs(r: Parameters<typeof videoScenes>[0]): number {
+  return durationOf(videoScenes(r));
+}
+/** Frames of one video. */
+export function videoFrames(r: Parameters<typeof videoScenes>[0]): number {
+  return Math.round((videoDurationMs(r) * VIDEO.fps) / 1000);
+}
+
 /** The scene playing at a time (ms from the start), clamped to the video. */
-export function sceneAt(ms: number): { index: number; id: VideoSceneId; local: number; duration: number } {
+export function sceneAt(
+  ms: number,
+  scenes: readonly VideoScene[] = VIDEO_SCENES,
+): { index: number; id: VideoSceneId; local: number; duration: number } {
   let start = 0;
-  const t = Math.max(0, Math.min(ms, VIDEO_DURATION_MS - 1));
-  for (let i = 0; i < VIDEO_SCENES.length; i++) {
-    const s = VIDEO_SCENES[i];
+  const t = Math.max(0, Math.min(ms, durationOf(scenes) - 1));
+  for (let i = 0; i < scenes.length; i++) {
+    const s = scenes[i];
     if (t < start + s.ms) return { index: i, id: s.id, local: t - start, duration: s.ms };
     start += s.ms;
   }
-  const last = VIDEO_SCENES.length - 1;
-  return { index: last, id: VIDEO_SCENES[last].id, local: VIDEO_SCENES[last].ms - 1, duration: VIDEO_SCENES[last].ms };
+  const last = scenes.length - 1;
+  return { index: last, id: scenes[last].id, local: scenes[last].ms - 1, duration: scenes[last].ms };
 }
 
 /** Start time of a scene (ms). */
-export function sceneStart(index: number): number {
-  return VIDEO_SCENES.slice(0, index).reduce((sum, s) => sum + s.ms, 0);
+export function sceneStart(index: number, scenes: readonly VideoScene[] = VIDEO_SCENES): number {
+  return scenes.slice(0, index).reduce((sum, s) => sum + s.ms, 0);
 }
 
 type VideoCommon = {
@@ -73,6 +97,8 @@ export type MonthlyVideoReport = VideoCommon & {
   /** Never negative. */
   exceededBy: number;
   remaining: number;
+  /** The PC$ challenge result for this month (percentage only), or null: no PC$ scene. */
+  pc: RecapPc | null;
 };
 
 /** A campaign month the week touches, as it stood at the end of the week. */
@@ -106,7 +132,7 @@ const safeName = (s: string) => s.replace(/[^A-Za-z0-9-]/g, "");
  * The report a recap video shows, from a ready weekly or monthly recap.
  * Returns null if the recap isn't ready (nothing is invented to fill the gap).
  */
-export function buildVideoReport(recap: Recap, campaignName: string): VideoReport | null {
+export function buildVideoReport(recap: Recap, campaignName: string, pc: RecapPc | null = null): VideoReport | null {
   if (recap.state !== "ready") return null;
   const p = recap.period;
   const common: Omit<VideoCommon, "periodLabel" | "fileBase"> = {
@@ -177,6 +203,7 @@ export function buildVideoReport(recap: Recap, campaignName: string): VideoRepor
     complete: target !== null && total >= target,
     exceededBy: target !== null ? Math.max(0, total - target) : 0,
     remaining: target !== null ? Math.max(0, target - total) : 0,
+    pc: recapPcFor(p, pc),
     fileBase: safeName(`${squadConfig.fileSlug}-${monthLabel}-${year}`),
   };
 }

@@ -20,6 +20,7 @@ import { Avatar, Meter } from "@/components/ui";
 import { type MilestoneKey, formatDelta, pluralCases } from "@/lib/mission";
 import { type Recap, type RecapKind, type RecapPeriod, recapHeadline, recapSummaryText, weekdayShort } from "@/lib/recap";
 import { squadConfig } from "@/config/squad";
+import { PC_EVERYONE_LINE, type RecapPc, pcStatusLine, pcSummaryLine, recapPcFor } from "@/lib/recap-pc";
 
 export type ReadyRecap = Extract<Recap, { state: "ready" }>;
 
@@ -46,15 +47,27 @@ export type RecapContext = {
   /** null once the campaign is over. */
   next: NextMission | null;
   overall: { total: number; target: number; percent: number; meterPercent: number; complete: boolean };
+  /** The PC$ challenge result (percentage only), shown in the recap of its month; null without a challenge. */
+  pc: RecapPc | null;
 };
 
-const SCENES = [
+const BASE_SCENES = [
   { id: "opening", ms: 3500 },
   { id: "performance", ms: 5500 },
   { id: "milestones", ms: 4500 },
   { id: "thanks", ms: 4000 },
   { id: "next", ms: 5000 },
 ] as const;
+const PC_SCENE = { id: "pc", ms: 4500 } as const;
+type SceneDef = (typeof BASE_SCENES)[number] | typeof PC_SCENE;
+type SceneId = SceneDef["id"];
+const PC_SCENES: readonly SceneDef[] = [BASE_SCENES[0], BASE_SCENES[1], PC_SCENE, ...BASE_SCENES.slice(2)];
+
+/** The story's scenes: the PC$ result follows the cases result in the challenge month's recap only. */
+function scenesFor(recap: ReadyRecap, pc: RecapPc | null): readonly SceneDef[] {
+  if (!recapPcFor(recap.period, pc)) return BASE_SCENES;
+  return PC_SCENES;
+}
 
 const OBJECT: Record<MilestoneKey, (p: ArtProps) => React.ReactNode> = {
   started: Star3D,
@@ -65,7 +78,8 @@ const OBJECT: Record<MilestoneKey, (p: ArtProps) => React.ReactNode> = {
 
 
 /**
- * The immersive recap: five short scenes (about 22 s), then a summary card.
+ * The immersive recap: five short scenes (about 22 s; six with the PC$ result
+ * in the challenge month), then a summary card.
  * Pause / resume, back / next, skip to the summary, replay and close (× or
  * Escape). It pauses while the app is in the background. Reduced motion: no
  * movement (scenes swap without animation; numbers appear at their value).
@@ -88,6 +102,7 @@ export function RecapPlayer({
   const [reduced] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const fills = useRef<(HTMLSpanElement | null)[]>([]);
   const elapsed = useRef(0);
+  const SCENES = scenesFor(recap, ctx.pc);
   const done = scene >= SCENES.length;
 
   // Scene clock: fills the active segment and moves on when it's full.
@@ -110,7 +125,7 @@ export function RecapPlayer({
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [scene, paused, done, run]);
+  }, [scene, paused, done, run, SCENES]);
 
   // Pause while the app is hidden (switching apps, locking the phone).
   useEffect(() => {
@@ -278,9 +293,46 @@ function RoundButton({
 const rise = (reduced: boolean, delay = 0) =>
   reduced ? {} : { className: "animate-rise", style: { animationDelay: `${delay}ms` } as React.CSSProperties };
 
-function Scene({ id, recap, ctx, reduced }: { id: (typeof SCENES)[number]["id"]; recap: ReadyRecap; ctx: RecapContext; reduced: boolean }) {
+function Scene({ id, recap, ctx, reduced }: { id: SceneId; recap: ReadyRecap; ctx: RecapContext; reduced: boolean }) {
   const p = recap.period;
   const unit = p.kind === "week" ? "week" : "month";
+
+  // Squad level and percentage only: no amounts, no names, no count of who did or didn't.
+  const pc = id === "pc" ? recapPcFor(p, ctx.pc) : null;
+  if (pc) {
+    return (
+      <>
+        <Gem3D className={`size-24 [@media(max-height:640px)]:size-16 ${reduced ? "" : "animate-float"}`} />
+        <div className={`w-full ${reduced ? "" : "animate-rise"}`} style={reduced ? undefined : { animationDelay: "60ms" }}>
+          <p className="mt-4 text-[12px] font-bold tracking-[0.14em] text-white/80 uppercase">{pc.monthLabel} PC$ Challenge</p>
+          <p className="mt-2 text-[72px] leading-none font-extrabold tracking-tight tabular-nums" data-testid="recap-pc-percent">
+            <AnimatedNumber value={pc.percent} duration={1100} />%
+          </p>
+          <p className="mt-1 text-[14px] font-bold tracking-wide text-white/80 uppercase">of our squad target</p>
+          <div className="mt-4 w-full">
+            <Meter onBrand value={pc.meterPercent} label={`${pc.monthLabel} PC$: ${pc.percent}% of our squad target`} />
+          </div>
+        </div>
+        <div className={`w-full ${reduced ? "" : "animate-rise"}`} style={reduced ? undefined : { animationDelay: "300ms" }}>
+          <p className="mt-4 text-[22px] leading-snug font-extrabold" data-testid="recap-pc-status">
+            {pcStatusLine(pc)}
+          </p>
+          {pc.everyoneMinimum ? (
+            <p
+              className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/15 py-1.5 pr-3.5 pl-1.5 text-left text-[14px] leading-tight font-bold"
+              data-testid="recap-pc-everyone"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="size-6 shrink-0">
+                <circle cx="12" cy="12" r="12" fill="#16a34a" />
+                <path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              {PC_EVERYONE_LINE.replace(/\s*✓$/, "")}
+            </p>
+          ) : null}
+        </div>
+      </>
+    );
+  }
 
   if (id === "opening") {
     return (
@@ -523,9 +575,11 @@ function RecapSummary({
   // Offer only what this browser can really do: the share sheet, else copy.
   const canShare = typeof navigator.share === "function";
   const canCopy = typeof navigator.clipboard?.writeText === "function";
+  const pc = recapPcFor(p, ctx.pc);
   const text = recapSummaryText(
     recap,
     ctx.next ? { monthLabel: ctx.next.monthLabel, total: ctx.next.total, target: ctx.next.target, remaining: ctx.next.upcoming ? ctx.next.target : ctx.next.remaining } : null,
+    pc ? pcSummaryLine(pc) : null,
   );
 
   const copy = async () => {
@@ -601,6 +655,22 @@ function RecapSummary({
             <p className="mt-1 text-[14px]">No new milestones this time</p>
           )}
         </div>
+
+        {pc ? (
+          <div className="mt-4" data-testid="recap-summary-pc">
+            <div className="flex items-baseline justify-between gap-2 text-[14px] font-bold">
+              <span>{pc.monthLabel} PC$</span>
+              <span className="tabular-nums">{pc.percent}% of our squad target</span>
+            </div>
+            <div className="mt-1.5">
+              <Meter size="sm" value={pc.meterPercent} complete={pc.reached} label={`${pc.monthLabel} PC$: ${pc.percent}% of our squad target`} />
+            </div>
+            <p className="mt-1 text-[13px] text-muted">
+              {pcStatusLine(pc)}
+              {pc.everyoneMinimum ? ` · ${PC_EVERYONE_LINE}` : ""}
+            </p>
+          </div>
+        ) : null}
 
         <div className="mt-4 rounded-tile bg-surface-2 p-3">
           <p className="text-[13px] font-bold text-muted">Next mission</p>

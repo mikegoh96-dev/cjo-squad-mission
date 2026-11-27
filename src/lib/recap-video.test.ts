@@ -14,7 +14,11 @@ import {
   sceneAt,
   sceneStart,
   targetLine,
+  videoDurationMs,
+  videoFrames,
+  videoScenes,
 } from "./recap-video.ts";
+import type { RecapPc } from "./recap-pc.ts";
 
 const TZ = "Asia/Singapore";
 const targets = [
@@ -34,7 +38,13 @@ const totals = (events: HistoryEvent[]) => {
   for (const e of events) out[e.month] = (out[e.month] ?? 0) + e.delta;
   return out;
 };
-function report(events: HistoryEvent[], month = "2026-10-01", now = sg("2026-11-02T10:00:00"), t = targets) {
+function report(
+  events: HistoryEvent[],
+  month = "2026-10-01",
+  now = sg("2026-11-02T10:00:00"),
+  t = targets,
+  pc: RecapPc | null = null,
+) {
   const recap = computeRecap({
     period: makePeriod("month", month, TZ, now),
     events,
@@ -43,7 +53,7 @@ function report(events: HistoryEvent[], month = "2026-10-01", now = sg("2026-11-
     memberIds: ["a", "b", "c"],
     now,
   });
-  const r = buildVideoReport(recap, "Test Squad Mission (Oct to Dec)");
+  const r = buildVideoReport(recap, "Test Squad Mission (Oct to Dec)", pc);
   if (r) assert.equal(r.kind, "month");
   return r as MonthlyVideoReport | null;
 }
@@ -76,6 +86,47 @@ describe("timeline", () => {
     assert.equal(sceneAt(-5).id, "opening");
     assert.equal(sceneAt(999999).id, "closing");
     assert.equal(sceneStart(4), 2800 + 5000 + 4600 + 4200);
+  });
+});
+
+describe("timeline with the PC$ scene", () => {
+  const pc: RecapPc = {
+    month: "2026-11-01",
+    monthLabel: "November",
+    percent: 64,
+    meterPercent: 64,
+    reached: false,
+    everyoneMinimum: false,
+    closed: false,
+    closesLabel: "30 Nov, 11:59pm",
+  };
+  const nov = [ev("2026-11-03T10:00:00", 5)];
+  test("only the challenge month's video gets it, right after the cases result", () => {
+    const withPc = report(nov, "2026-11-01", sg("2026-11-20T10:00:00"), targets, pc);
+    assert.ok(withPc);
+    assert.equal(withPc.pc, pc);
+    assert.deepEqual(videoScenes(withPc).map((s) => s.id), ["opening", "achievement", "pc", "milestones", "momentum", "closing"]);
+    assert.equal(videoDurationMs(withPc), 25200);
+    assert.equal(videoFrames(withPc), 756);
+    const scenes = videoScenes(withPc);
+    assert.deepEqual(sceneAt(7800, scenes), { index: 2, id: "pc", local: 0, duration: 4600 });
+    assert.equal(sceneAt(999999, scenes).id, "closing");
+    assert.equal(sceneStart(5, scenes), 2800 + 5000 + 4600 + 4600 + 4200);
+  });
+  test("every other video keeps the exact base timeline", () => {
+    const oct = report([ev("2026-10-03T10:00:00", 5)], "2026-10-01", sg("2026-11-20T10:00:00"), targets, pc);
+    assert.ok(oct);
+    assert.equal(oct.pc, null);
+    assert.equal(videoScenes(oct), VIDEO_SCENES);
+    assert.equal(videoDurationMs(oct), VIDEO_DURATION_MS);
+    assert.equal(videoFrames(oct), VIDEO_FRAMES);
+    const novNoPc = report(nov, "2026-11-01", sg("2026-11-20T10:00:00"));
+    assert.ok(novNoPc);
+    assert.equal(novNoPc.pc, null);
+    assert.equal(videoFrames(novNoPc), 618);
+    const week = weekly(nov, "2026-11-02", sg("2026-11-20T10:00:00"));
+    assert.ok(week);
+    assert.equal(videoFrames(week), 618);
   });
 });
 

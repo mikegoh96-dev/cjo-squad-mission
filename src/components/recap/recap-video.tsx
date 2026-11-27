@@ -22,10 +22,14 @@ import {
   VIDEO_DURATION_MS,
   VIDEO_SCENES,
   type VideoReport,
+  type VideoScene,
   buildVideoReport,
   resultLine,
   sceneStart,
+  videoDurationMs,
+  videoScenes,
 } from "@/lib/recap-video";
+import { pcSummaryLine } from "@/lib/recap-pc";
 import { squadConfig } from "@/config/squad";
 
 type Composition = typeof import("./video/composition");
@@ -52,7 +56,8 @@ type Step =
 
 const PREVIEW_SCALE = 0.5;
 /** A scene's "settled" moment, for the still preview under reduced motion. */
-const settled = (i: number) => sceneStart(i) + (i === VIDEO_SCENES.length - 1 ? VIDEO_SCENES[i].ms - 1 : VIDEO_SCENES[i].ms - 400);
+const settled = (scenes: readonly VideoScene[], i: number) =>
+  sceneStart(i, scenes) + (i === scenes.length - 1 ? scenes[i].ms - 1 : scenes[i].ms - 400);
 const fmtMB = (bytes: number) => `${(bytes / 1_000_000).toFixed(1)} MB`;
 
 /** What the preview canvas shows, for screen readers. */
@@ -64,7 +69,7 @@ function previewLabel(r: VideoReport): string {
   }
   return `Preview of the ${r.monthLabel} ${r.year} recap: ${r.total}${r.target !== null ? ` of ${r.target}` : ""} cases${
     r.percent !== null ? `, ${r.percent}% complete` : ""
-  }`;
+  }${r.pc ? `. ${pcSummaryLine(r.pc)}` : ""}`;
 }
 
 /**
@@ -109,6 +114,8 @@ export function RecapVideoProvider({ ctx, children }: { ctx: RecapContext; child
 
   const shown = options.filter((o) => o.kind === kind);
   const report = shown.find((o) => o.key === selected)?.report ?? null;
+  const scenes = report ? videoScenes(report) : VIDEO_SCENES;
+  const durationMs = report ? videoDurationMs(report) : VIDEO_DURATION_MS;
 
   const release = () => {
     abort.current?.abort();
@@ -161,7 +168,7 @@ export function RecapVideoProvider({ ctx, children }: { ctx: RecapContext; child
               label: k === "week" ? p.title : `${p.title} ${p.startDate.slice(0, 4)}`,
               sub: k === "week" ? p.rangeLabel : null,
               status: p.status,
-              report: buildVideoReport(recap, ctx.campaign.name),
+              report: buildVideoReport(recap, ctx.campaign.name, ctx.pc),
             };
           }),
         );
@@ -278,8 +285,10 @@ export function RecapVideoProvider({ ctx, children }: { ctx: RecapContext; child
     const g = canvas.getContext("2d", { alpha: false });
     if (!g) return;
     g.setTransform(PREVIEW_SCALE, 0, 0, PREVIEW_SCALE, 0, 0);
+    const scenesNow = videoScenes(report);
+    const total = videoDurationMs(report);
     if (reduced || !playing) {
-      c.drawFrame(g, report, a, reduced ? settled(still) : Math.min(previewAt.current, VIDEO_DURATION_MS - 1));
+      c.drawFrame(g, report, a, reduced ? settled(scenesNow, Math.min(still, scenesNow.length - 1)) : Math.min(previewAt.current, total - 1));
       return;
     }
     let frame = 0;
@@ -290,9 +299,9 @@ export function RecapVideoProvider({ ctx, children }: { ctx: RecapContext; child
       if (now - lastDraw >= 1000 / VIDEO.fps - 1) {
         lastDraw = now;
         // Hold the last frame for a moment, then loop.
-        if (now - begin >= VIDEO_DURATION_MS + 1200) begin = now;
+        if (now - begin >= total + 1200) begin = now;
         previewAt.current = now - begin;
-        c.drawFrame(g, report, a, Math.min(previewAt.current, VIDEO_DURATION_MS - 1));
+        c.drawFrame(g, report, a, Math.min(previewAt.current, total - 1));
       }
       frame = requestAnimationFrame(tick);
     };
@@ -515,12 +524,12 @@ export function RecapVideoProvider({ ctx, children }: { ctx: RecapContext; child
                                   <ChevronLeftIcon className="size-5" />
                                 </IconButton>
                                 <span className="min-w-24 text-center text-[13px] font-bold text-muted" data-testid="video-still">
-                                  Scene {still + 1} of {VIDEO_SCENES.length}
+                                  Scene {Math.min(still, scenes.length - 1) + 1} of {scenes.length}
                                 </span>
                                 <IconButton
                                   label="Next scene"
-                                  onClick={() => setStill((s) => Math.min(VIDEO_SCENES.length - 1, s + 1))}
-                                  disabled={still === VIDEO_SCENES.length - 1}
+                                  onClick={() => setStill((s) => Math.min(scenes.length - 1, s + 1))}
+                                  disabled={still >= scenes.length - 1}
                                 >
                                   <ChevronRightIcon className="size-5" />
                                 </IconButton>
@@ -531,7 +540,7 @@ export function RecapVideoProvider({ ctx, children }: { ctx: RecapContext; child
                                   {playing ? <PauseIcon className="size-5" /> : <PlayIcon className="size-5" />}
                                 </IconButton>
                                 <span className="text-[13px] font-bold text-muted">
-                                  Preview · {(VIDEO_DURATION_MS / 1000).toFixed(1)} s · 9:16
+                                  Preview · {(durationMs / 1000).toFixed(1)} s · 9:16
                                 </span>
                               </>
                             )}
@@ -711,7 +720,7 @@ function Done({
         <p className="text-[16px] font-extrabold text-good-text">{video ? "Your video is ready" : "Your image is ready"}</p>
         <p className="mt-1 text-[14px]" data-testid="video-file">
           {made.name} · {video ? "MP4 video" : "PNG image"} · 1080 × 1920
-          {video ? ` · ${(VIDEO_DURATION_MS / 1000).toFixed(1)} s` : ""} · {fmtMB(made.blob.size)}
+          {video ? ` · ${(videoDurationMs(report) / 1000).toFixed(1)} s` : ""} · {fmtMB(made.blob.size)}
         </p>
         <p className="mt-1 text-[13px] text-muted" data-testid="video-result">
           {resultLine(report)}
